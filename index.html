@@ -6,301 +6,320 @@
 <title>Dash Lala</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <style>
-  :root{
-    --bg:#0a0d14; --bg2:#0f1320;
-    --card:rgba(255,255,255,.045); --cardLine:rgba(255,255,255,.09);
-    --txt:#e9ecf4; --muted:#8a93ab;
-    --accent:#7c6cff; --accent2:#22d3ee;
-    --green:#34d399; --red:#fb7185; --amber:#fbbf24;
-    --shadow:0 10px 30px rgba(0,0,0,.35);
-  }
+  :root{--bg:#0a0d14;--bg2:#0f1320;--card:rgba(255,255,255,.045);--cardLine:rgba(255,255,255,.09);
+    --txt:#e9ecf4;--muted:#8a93ab;--accent:#7c6cff;--accent2:#22d3ee;--green:#34d399;--red:#fb7185;--amber:#fbbf24;--shadow:0 10px 30px rgba(0,0,0,.35);}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  body{margin:0;color:var(--txt);font-family:-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
-    padding-bottom:84px;background:
-      radial-gradient(900px 500px at 85% -10%, rgba(124,108,255,.18), transparent 60%),
-      radial-gradient(700px 500px at -10% 0%, rgba(34,211,238,.12), transparent 55%),
-      linear-gradient(180deg,var(--bg2),var(--bg));background-attachment:fixed;min-height:100vh}
-  header{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;
-    padding:16px 18px;backdrop-filter:blur(10px);
-    background:linear-gradient(180deg,rgba(10,13,20,.85),rgba(10,13,20,.35));border-bottom:1px solid var(--cardLine)}
-  .brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.3px}
+  body{margin:0;color:var(--txt);font-family:-apple-system,"Segoe UI",Roboto,Arial,sans-serif;padding-bottom:84px;
+    background:radial-gradient(900px 500px at 85% -10%,rgba(124,108,255,.18),transparent 60%),radial-gradient(700px 500px at -10% 0%,rgba(34,211,238,.12),transparent 55%),linear-gradient(180deg,var(--bg2),var(--bg));background-attachment:fixed;min-height:100vh}
+  header{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;padding:16px 18px;backdrop-filter:blur(10px);background:linear-gradient(180deg,rgba(10,13,20,.85),rgba(10,13,20,.35));border-bottom:1px solid var(--cardLine)}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:800}
   .brand .dot{width:11px;height:11px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 0 14px var(--accent)}
   .month{font-size:12px;color:var(--muted);text-transform:capitalize;padding:5px 11px;border:1px solid var(--cardLine);border-radius:99px}
-  .wrap{max-width:780px;margin:0 auto;padding:18px}
+  .wrap{max-width:820px;margin:0 auto;padding:18px}
   h2{font-size:12px;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted);margin:24px 4px 12px;display:flex;align-items:center;gap:8px}
   h2::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--accent)}
   .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
-  .card{background:var(--card);border:1px solid var(--cardLine);border-radius:18px;padding:16px;
-    backdrop-filter:blur(8px);box-shadow:var(--shadow);animation:up .5s both;position:relative;overflow:hidden}
-  .card::after{content:"";position:absolute;inset:0;border-radius:18px;pointer-events:none;
-    background:linear-gradient(180deg,rgba(255,255,255,.05),transparent 40%)}
-  .card .lbl{color:var(--muted);font-size:12.5px;display:flex;align-items:center;gap:6px}
-  .card .val{font-size:22px;font-weight:800;margin-top:6px;letter-spacing:.3px}
-  .val.green{color:var(--green)} .val.red{color:var(--red)} .val.accent{color:#b9b3ff}
+  .card{background:var(--card);border:1px solid var(--cardLine);border-radius:18px;padding:16px;backdrop-filter:blur(8px);box-shadow:var(--shadow);animation:up .5s both;position:relative;overflow:hidden}
+  .card .lbl{color:var(--muted);font-size:12.5px}
+  .card .val{font-size:22px;font-weight:800;margin-top:6px}
+  .val.green{color:var(--green)}.val.red{color:var(--red)}.val.accent{color:#b9b3ff}
   .big{grid-column:span 2}
   @keyframes up{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-  .card:nth-child(1){animation-delay:.02s}.card:nth-child(2){animation-delay:.06s}
-  .card:nth-child(3){animation-delay:.10s}.card:nth-child(4){animation-delay:.14s}
   .chartbox{background:var(--card);border:1px solid var(--cardLine);border-radius:18px;padding:16px;box-shadow:var(--shadow);animation:up .5s both}
   .chartbox h3{margin:0 0 10px;font-size:13px;color:var(--muted);font-weight:600}
   .charts{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  @media(max-width:560px){.charts{grid-template-columns:1fr}.big{grid-column:span 2}}
+  @media(max-width:560px){.charts{grid-template-columns:1fr}}
   input,select,button{font:inherit}
   input,select{width:100%;background:rgba(255,255,255,.05);border:1px solid var(--cardLine);color:var(--txt);border-radius:12px;padding:12px;margin-top:6px;outline:none}
   input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(124,108,255,.18)}
   label{display:block;font-size:13px;color:var(--muted);margin-top:12px}
   button{background:linear-gradient(135deg,var(--accent),#5b8cff);color:#fff;border:none;border-radius:12px;padding:13px;font-weight:700;cursor:pointer;margin-top:16px;width:100%;transition:transform .1s,filter .2s;box-shadow:0 8px 20px rgba(124,108,255,.3)}
-  button:active{transform:scale(.98)} button:hover{filter:brightness(1.08)}
+  button:active{transform:scale(.98)}button:hover{filter:brightness(1.08)}
   button.ghost{background:rgba(255,255,255,.05);border:1px solid var(--cardLine);box-shadow:none;color:var(--txt)}
+  button.green{background:linear-gradient(135deg,#34d399,#10b981);box-shadow:0 8px 20px rgba(52,211,153,.25)}
+  button.sm{width:auto;padding:8px 14px;margin-top:0;font-size:13px}
   .row{display:flex;gap:12px}.row>*{flex:1}
+  .seg{display:flex;gap:7px;flex-wrap:wrap;margin:4px 0 16px}
+  .seg button{width:auto;margin:0;padding:8px 14px;border-radius:99px;background:rgba(255,255,255,.05);border:1px solid var(--cardLine);color:var(--muted);font-weight:600;font-size:13px;box-shadow:none}
+  .seg button.on{background:linear-gradient(135deg,var(--accent),#5b8cff);color:#fff;border-color:transparent}
   .item{background:var(--card);border:1px solid var(--cardLine);border-radius:14px;padding:13px 15px;margin-bottom:9px;display:flex;justify-content:space-between;align-items:center;gap:10px;animation:up .4s both}
   .item small{color:var(--muted);font-size:12px}
   .pill{font-size:11px;padding:3px 10px;border-radius:99px;background:rgba(124,108,255,.16);color:#c3bcff;border:1px solid rgba(124,108,255,.25)}
   .bar{height:6px;border-radius:99px;background:rgba(255,255,255,.08);margin-top:7px;overflow:hidden}
   .bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:99px}
-  nav{position:fixed;bottom:0;left:0;right:0;z-index:6;display:flex;justify-content:space-around;
-    padding:8px 6px calc(8px + env(safe-area-inset-bottom));backdrop-filter:blur(14px);
-    background:linear-gradient(180deg,rgba(14,18,28,.6),rgba(8,10,16,.92));border-top:1px solid var(--cardLine)}
-  nav button{flex:1;background:none;border:none;color:var(--muted);box-shadow:none;margin:0;padding:7px 2px;font-size:10.5px;font-weight:600;
-    border-radius:12px;display:flex;flex-direction:column;align-items:center;gap:3px;transition:color .2s,background .2s}
-  nav button svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  nav{position:fixed;bottom:0;left:0;right:0;z-index:6;display:flex;justify-content:space-around;padding:8px 4px calc(8px + env(safe-area-inset-bottom));backdrop-filter:blur(14px);background:linear-gradient(180deg,rgba(14,18,28,.6),rgba(8,10,16,.92));border-top:1px solid var(--cardLine)}
+  nav button{flex:1;background:none;border:none;color:var(--muted);box-shadow:none;margin:0;padding:7px 2px;font-size:10px;font-weight:600;border-radius:12px;display:flex;flex-direction:column;align-items:center;gap:3px}
+  nav button svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
   nav button.active{color:#fff;background:linear-gradient(135deg,rgba(124,108,255,.22),rgba(34,211,238,.14))}
-  nav button.active svg{filter:drop-shadow(0 0 6px var(--accent))}
   .muted{color:var(--muted);font-size:13.5px;line-height:1.5}
-  .err{color:var(--red);font-size:13px;margin-top:10px}
-  .ok{color:var(--green);font-size:13px;margin-top:10px}
+  .err{color:var(--red);font-size:13px;margin-top:10px}.ok{color:var(--green);font-size:13px;margin-top:10px}
   .skel{height:80px;border-radius:18px;background:linear-gradient(90deg,rgba(255,255,255,.04),rgba(255,255,255,.09),rgba(255,255,255,.04));background-size:200% 100%;animation:sh 1.2s infinite}
   @keyframes sh{from{background-position:200% 0}to{background-position:-200% 0}}
 </style>
 </head>
 <body>
-<header>
-  <div class="brand"><span class="dot"></span>Dash Lala</div>
-  <span class="month" id="monthLabel"></span>
-</header>
+<header><div class="brand"><span class="dot"></span>Dash Lala</div><span class="month" id="monthLabel"></span></header>
 <div class="wrap" id="app"></div>
-
 <nav id="nav"></nav>
-
 <script>
-const LS = {
-  get url(){return localStorage.getItem('dl_url')||''}, set url(v){localStorage.setItem('dl_url',v)},
-  get key(){return localStorage.getItem('dl_key')||''}, set key(v){localStorage.setItem('dl_key',v)},
-  get vh(){return parseFloat(localStorage.getItem('dl_vh')||'0')||0}, set vh(v){localStorage.setItem('dl_vh',v)},
-};
-const BRL = n => (n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
-const app = document.getElementById('app');
-const PALETTE = ['#7c6cff','#22d3ee','#34d399','#fbbf24','#fb7185','#a78bfa','#38bdf8','#f472b6'];
-let charts = [];
-
-async function api(method, path, body){
-  if(!LS.url || !LS.key) throw new Error('Configure a URL do Worker e a chave em Config.');
-  const r = await fetch(LS.url.replace(/\/$/,'') + path, {
-    method, headers:{'X-App-Key':LS.key,'Content-Type':'application/json'}, body: body?JSON.stringify(body):undefined});
-  const data = await r.json().catch(()=>({}));
-  if(!r.ok) throw new Error(data.error || ('Erro '+r.status));
+const LS={get url(){return localStorage.getItem('dl_url')||''},set url(v){localStorage.setItem('dl_url',v)},
+  get key(){return localStorage.getItem('dl_key')||''},set key(v){localStorage.setItem('dl_key',v)},
+  get vh(){return parseFloat(localStorage.getItem('dl_vh')||'0')||0},set vh(v){localStorage.setItem('dl_vh',v)}};
+const BRL=n=>(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const app=document.getElementById('app');
+const PALETTE=['#7c6cff','#22d3ee','#34d399','#fbbf24','#fb7185','#a78bfa','#38bdf8','#f472b6'];
+let charts=[];
+async function api(method,path,body){
+  if(!LS.url||!LS.key)throw new Error('Configure a URL do Worker e a chave em Config.');
+  const r=await fetch(LS.url.replace(/\/$/,'')+path,{method,headers:{'X-App-Key':LS.key,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
+  const data=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(data.error||('Erro '+r.status));
   return data;
 }
-const list = name => api('GET', `/tables/${encodeURIComponent(name)}/rows`).then(d=>d.rows||[]);
-const addRow = (name, fields) => api('POST', `/tables/${encodeURIComponent(name)}/rows`, {rows:[fields]});
-function num(v){ if(typeof v==='number') return v; if(!v) return 0; const n=parseFloat(String(v).replace(/[^\d.,-]/g,'').replace(/\.(?=\d{3})/g,'').replace(',','.')); return isNaN(n)?0:n; }
-function isThisMonth(d){ if(!d) return false; const dt=new Date(d), n=new Date(); return dt.getFullYear()===n.getFullYear()&&dt.getMonth()===n.getMonth(); }
-function today(){ return new Date().toISOString().slice(0,10); }
-function destroyCharts(){ charts.forEach(c=>{try{c.destroy()}catch(e){}}); charts=[]; }
-function animateCounts(){
-  document.querySelectorAll('.cv').forEach(el=>{
-    const target=parseFloat(el.dataset.v||'0'), t0=performance.now();
-    (function step(t){const k=Math.min(1,(t-t0)/650),e=1-Math.pow(1-k,3);
-      el.textContent=BRL(target*e); if(k<1)requestAnimationFrame(step);})(t0);
-  });
-}
+const list=name=>api('GET',`/tables/${encodeURIComponent(name)}/rows`).then(d=>d.rows||[]);
+const addRow=(name,f)=>api('POST',`/tables/${encodeURIComponent(name)}/rows`,{rows:[f]});
+function num(v){if(typeof v==='number')return v;if(!v)return 0;const n=parseFloat(String(v).replace(/[^\d.,-]/g,'').replace(/\.(?=\d{3})/g,'').replace(',','.'));return isNaN(n)?0:n;}
+function isThisMonth(d){if(!d)return false;const dt=new Date(d),n=new Date();return dt.getFullYear()===n.getFullYear()&&dt.getMonth()===n.getMonth();}
+function today(){return new Date().toISOString().slice(0,10);}
+function fmtBR(s){if(!s)return'';const p=String(s).slice(0,10).split('-');return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:s;}
+function addMonthsISO(iso,k){const d=new Date(iso+'T00:00:00');d.setMonth(d.getMonth()+k);return d.toISOString().slice(0,10);}
+function monthsBetween(a,b){const x=new Date(a+'T00:00:00'),y=new Date(b+'T00:00:00');return (y.getFullYear()-x.getFullYear())*12+(y.getMonth()-x.getMonth());}
+function cfg(){if(!LS.url||!LS.key){app.innerHTML='<p class="muted">Configure a URL do Worker e a chave em <b>Config</b> para começar.</p>';return false;}return true;}
+function destroyCharts(){charts.forEach(c=>{try{c.destroy()}catch(e){}});charts=[];}
+function selOpts(arr,field,sel){return '<option value=""></option>'+arr.map(r=>{const v=(r[field]||'').toString();return `<option ${v===sel?'selected':''}>${v}</option>`}).join('');}
+function seg(items,active,pick){const d=document.createElement('div');d.className='seg';items.forEach(([id,lb])=>{const b=document.createElement('button');b.textContent=lb;if(id===active)b.className='on';b.onclick=()=>pick(id);d.appendChild(b);});return d;}
+function val(id){return document.getElementById(id).value;}
+function animateCounts(){document.querySelectorAll('.cv').forEach(el=>{const t=parseFloat(el.dataset.v||'0'),t0=performance.now();(function s(n){const k=Math.min(1,(n-t0)/650),e=1-Math.pow(1-k,3);el.textContent=BRL(t*e);if(k<1)requestAnimationFrame(s);})(t0);});}
 
-// ---------- NAV ----------
 const TABS=[
-  {id:'home',  t:'Início', i:'M3 11l9-8 9 8M5 9v11h5v-6h4v6h5V9'},
-  {id:'add',   t:'Lançar', i:'M12 5v14M5 12h14'},
-  {id:'lists', t:'Listas', i:'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01'},
-  {id:'timer', t:'Tempo',  i:'M12 7v5l3 2M12 3a9 9 0 100 18 9 9 0 000-18z'},
-  {id:'config',t:'Config', i:'M12 15a3 3 0 100-6 3 3 0 000 6zM19 12a7 7 0 00-.1-1l2-1.6-2-3.4-2.4 1a7 7 0 00-1.7-1L14.5 2h-5l-.3 2.9a7 7 0 00-1.7 1l-2.4-1-2 3.4L2.6 11a7 7 0 000 2l-2 1.6 2 3.4 2.4-1a7 7 0 001.7 1l.3 2.9h5l.3-2.9a7 7 0 001.7-1l2.4 1 2-3.4-2-1.6c.1-.3.1-.6.1-1z'},
+ {id:'home',t:'Início',i:'M3 11l9-8 9 8M5 9v11h5v-6h4v6h5V9'},
+ {id:'add',t:'Lançar',i:'M12 5v14M5 12h14'},
+ {id:'gerir',t:'Gerir',i:'M3 7h18v10H3zM3 11h18'},
+ {id:'lists',t:'Listas',i:'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01'},
+ {id:'timer',t:'Tempo',i:'M12 7v5l3 2M12 3a9 9 0 100 18 9 9 0 000-18z'},
+ {id:'config',t:'Config',i:'M12 15a3 3 0 100-6 3 3 0 000 6zM19.4 13a7.8 7.8 0 000-2l2-1.5-2-3.5-2.3 1a7.6 7.6 0 00-1.7-1L14.5 3h-5l-.2 2.5a7.6 7.6 0 00-1.7 1l-2.3-1-2 3.5L3 11a7.8 7.8 0 000 2l-2 1.5 2 3.5 2.3-1a7.6 7.6 0 001.7 1l.2 2.5h5l.2-2.5a7.6 7.6 0 001.7-1l2.3 1 2-3.5z'},
 ];
 let current='home';
 const nav=document.getElementById('nav');
 nav.innerHTML=TABS.map(x=>`<button data-tab="${x.id}"><svg viewBox="0 0 24 24"><path d="${x.i}"/></svg>${x.t}</button>`).join('');
 nav.querySelectorAll('button').forEach(b=>b.onclick=()=>{current=b.dataset.tab;syncNav();render();});
 function syncNav(){nav.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.tab===current));}
+function render(){document.getElementById('monthLabel').textContent=new Date().toLocaleDateString('pt-BR',{month:'long',year:'numeric'});destroyCharts();
+  ({home:viewHome,add:viewLancar,gerir:viewGerir,lists:viewLists,timer:viewTimer,config:viewConfig}[current])();}
 
-function render(){
-  document.getElementById('monthLabel').textContent=new Date().toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
-  destroyCharts();
-  ({home:viewHome,add:viewAdd,lists:viewLists,timer:viewTimer,config:viewConfig}[current])();
-}
-
-// ---------- HOME ----------
 async function viewHome(){
-  if(!LS.url||!LS.key){ app.innerHTML='<p class="muted">Bem-vindo 👋 Vá em <b>Config</b> e informe a URL do Worker e a chave de acesso para começar.</p>'; return; }
-  app.innerHTML='<div class="grid"><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>';
+  if(!cfg())return;
+  app.innerHTML='<div class="grid"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>';
   try{
-    const [lanc, contas] = await Promise.all([list('Lançamentos'), list('Contas')]);
+    const [lanc,contas]=await Promise.all([list('Lançamentos'),list('Contas')]);
     const sum=f=>lanc.filter(f).reduce((s,r)=>s+num(r['Valor']),0);
-    const mes=r=>isThisMonth(r['Data']), conf=r=>(r['Status']||'')==='Confirmado';
-    const sV=sum(r=>mes(r)&&r['Tipo']==='Saída'&&r['Natureza']==='Variada');
-    const sF=sum(r=>mes(r)&&r['Tipo']==='Saída'&&r['Natureza']==='Fixa');
-    const sP=sum(r=>mes(r)&&r['Tipo']==='Saída'&&r['Natureza']==='Parcelada');
-    const sT=sV+sF+sP;
-    const eV=sum(r=>mes(r)&&r['Tipo']==='Entrada'&&r['Natureza']==='Variada');
-    const eF=sum(r=>mes(r)&&r['Tipo']==='Entrada'&&r['Natureza']==='Fixa');
-    const eT=sum(r=>mes(r)&&r['Tipo']==='Entrada')-0;
-    const eTot=eV+eF+sum(r=>mes(r)&&r['Tipo']==='Entrada'&&r['Natureza']!=='Variada'&&r['Natureza']!=='Fixa');
-    const saldoMes=eTot-sT;
+    const mes=r=>isThisMonth(r['Data']),conf=r=>(r['Status']||'')==='Confirmado';
+    const sV=sum(r=>mes(r)&&r['Tipo']==='Saída'&&r['Natureza']==='Variada'),sF=sum(r=>mes(r)&&r['Tipo']==='Saída'&&r['Natureza']==='Fixa'),sP=sum(r=>mes(r)&&r['Tipo']==='Saída'&&r['Natureza']==='Parcelada'),sT=sV+sF+sP;
+    const eV=sum(r=>mes(r)&&r['Tipo']==='Entrada'&&r['Natureza']==='Variada'),eF=sum(r=>mes(r)&&r['Tipo']==='Entrada'&&r['Natureza']==='Fixa'),eTot=sum(r=>mes(r)&&r['Tipo']==='Entrada'),saldoMes=eTot-sT;
     const acum=sum(r=>r['Tipo']==='Entrada'&&conf(r))-sum(r=>r['Tipo']==='Saída'&&conf(r));
     const atual=contas.reduce((s,c)=>s+num(c['Saldo inicial']),0)+acum;
     const card=(l,v,cls='',big=false)=>`<div class="card ${big?'big':''}"><div class="lbl">${l}</div><div class="val ${cls} cv" data-v="${v}">${BRL(0)}</div></div>`;
-    // categorias de saída do mês
-    const catMap={};
-    lanc.filter(r=>mes(r)&&r['Tipo']==='Saída').forEach(r=>{const c=r['Categoria']||'Sem categoria';catMap[c]=(catMap[c]||0)+num(r['Valor'])});
-    const catL=Object.keys(catMap), catV=catL.map(k=>catMap[k]);
+    const catMap={};lanc.filter(r=>mes(r)&&r['Tipo']==='Saída').forEach(r=>{const c=r['Categoria']||'Sem categoria';catMap[c]=(catMap[c]||0)+num(r['Valor'])});
+    const catL=Object.keys(catMap),catV=catL.map(k=>catMap[k]);
     app.innerHTML=`
       <h2>Resumo do mês</h2>
-      <div class="grid">
-        ${card('Saldo do mês',saldoMes,saldoMes>=0?'green':'red',true)}
-        ${card('Saldo atual',atual,atual>=0?'green':'red')}
-        ${card('Saldo acumulado',acum,acum>=0?'green':'red')}
-      </div>
-      <h2>Saídas</h2>
-      <div class="grid">
-        ${card('Variadas',sV)}${card('Fixas',sF)}${card('Parceladas',sP)}${card('Total',sT,'red')}
-      </div>
-      <h2>Entradas</h2>
-      <div class="grid">
-        ${card('Variadas',eV)}${card('Fixas',eF)}${card('Total',eTot,'green')}
-      </div>
+      <div class="grid">${card('Saldo do mês',saldoMes,saldoMes>=0?'green':'red',true)}${card('Saldo atual',atual,atual>=0?'green':'red')}${card('Saldo acumulado',acum,acum>=0?'green':'red')}</div>
+      <h2>Saídas</h2><div class="grid">${card('Variadas',sV)}${card('Fixas',sF)}${card('Parceladas',sP)}${card('Total',sT,'red')}</div>
+      <h2>Entradas</h2><div class="grid">${card('Variadas',eV)}${card('Fixas',eF)}${card('Total',eTot,'green')}</div>
       <h2>Visão geral</h2>
-      <div class="charts">
-        <div class="chartbox"><h3>Saídas por categoria</h3><canvas id="cCat" height="180"></canvas></div>
-        <div class="chartbox"><h3>Entradas × Saídas</h3><canvas id="cES" height="180"></canvas></div>
-      </div>`;
+      <div class="charts"><div class="chartbox"><h3>Saídas por categoria</h3><canvas id="cCat" height="180"></canvas></div>
+      <div class="chartbox"><h3>Entradas × Saídas</h3><canvas id="cES" height="180"></canvas></div></div>`;
     animateCounts();
-    if(typeof Chart!=='undefined'){
-      Chart.defaults.color='#8a93ab'; Chart.defaults.font.family="'Segoe UI',sans-serif";
-      if(catV.length) charts.push(new Chart(cCat,{type:'doughnut',data:{labels:catL,datasets:[{data:catV,backgroundColor:PALETTE,borderColor:'rgba(0,0,0,.2)',borderWidth:2}]},options:{plugins:{legend:{position:'bottom',labels:{boxWidth:12,padding:10}}},cutout:'62%'}}));
+    if(typeof Chart!=='undefined'){Chart.defaults.color='#8a93ab';
+      if(catV.length)charts.push(new Chart(cCat,{type:'doughnut',data:{labels:catL,datasets:[{data:catV,backgroundColor:PALETTE,borderColor:'rgba(0,0,0,.2)',borderWidth:2}]},options:{plugins:{legend:{position:'bottom',labels:{boxWidth:12,padding:10}}},cutout:'62%'}}));
       else cCat.parentElement.innerHTML+='<p class="muted">Sem saídas neste mês.</p>';
       charts.push(new Chart(cES,{type:'bar',data:{labels:['Entradas','Saídas'],datasets:[{data:[eTot,sT],backgroundColor:['#34d399','#fb7185'],borderRadius:8,barThickness:54}]},options:{plugins:{legend:{display:false}},scales:{y:{grid:{color:'rgba(255,255,255,.06)'}},x:{grid:{display:false}}}}}));
     }
-  }catch(e){ app.innerHTML=`<p class="err">${e.message}</p>`; }
+  }catch(e){app.innerHTML=`<p class="err">${e.message}</p>`;}
 }
 
-// ---------- ADD ----------
-function viewAdd(){
-  if(!LS.url||!LS.key){ app.innerHTML='<p class="muted">Configure primeiro em Config.</p>'; return; }
-  app.innerHTML=`
-    <h2>Novo lançamento</h2>
-    <div class="card">
-      <div class="row">
-        <div><label>Tipo</label><select id="f_tipo"><option>Saída</option><option>Entrada</option></select></div>
-        <div><label>Natureza</label><select id="f_nat"><option>Variada</option><option>Fixa</option><option>Parcelada</option></select></div>
-      </div>
-      <label>Valor (R$)</label><input id="f_valor" type="number" step="0.01" inputmode="decimal" placeholder="0,00">
-      <label>Descrição</label><input id="f_desc" placeholder="ex: mercado">
-      <label>Data</label><input id="f_data" type="date" value="${today()}">
-      <div class="row">
-        <div><label>Categoria</label><input id="f_cat" placeholder="opcional"></div>
-        <div><label>Conta / Cartão</label><input id="f_conta" placeholder="ex: Nubank"></div>
-      </div>
-      <label>Status</label><select id="f_status"><option>Confirmado</option><option>Previsto</option></select>
-      <button id="save">Salvar lançamento</button>
-      <div id="msg"></div>
-    </div>`;
-  document.getElementById('save').onclick=async()=>{
-    const msg=document.getElementById('msg');
-    const f={'Data':f_data.value,'Descrição':f_desc.value,'Valor':parseFloat(f_valor.value||'0'),
-      'Tipo':f_tipo.value,'Natureza':f_nat.value,'Categoria':f_cat.value,'Conta':f_conta.value,'Status':f_status.value,'Origem':'Manual'};
-    if(!f.Valor){ msg.innerHTML='<p class="err">Informe um valor.</p>'; return; }
-    try{ msg.textContent='Salvando…'; await addRow('Lançamentos',f);
-      msg.innerHTML='<p class="ok">✅ Salvo!</p>'; f_valor.value='';f_desc.value='';f_cat.value='';
-    }catch(e){ msg.innerHTML=`<p class="err">${e.message}</p>`; }
-  };
+let subL='avulso';
+async function viewLancar(){
+  if(!cfg())return;
+  app.innerHTML='<div id="sb"></div><div id="sub"><div class="skel"></div></div>';
+  document.getElementById('sb').appendChild(seg([['avulso','Avulso'],['parcelado','Parcelado'],['fixo','Fixo']],subL,v=>{subL=v;viewLancar();}));
+  const sub=document.getElementById('sub');
+  let cats=[],carts=[],contas=[];
+  try{[cats,carts,contas]=await Promise.all([list('Categorias'),list('Cartões'),list('Contas')]);}catch(e){sub.innerHTML=`<p class="err">${e.message}</p>`;return;}
+  if(subL==='avulso')fAvulso(sub,cats,carts,contas);
+  else if(subL==='parcelado')fParcelado(sub,cats,carts);
+  else fFixo(sub,cats,carts,contas);
+}
+function fAvulso(sub,cats,carts,contas){
+  sub.innerHTML=`<div class="card">
+    <div class="row"><div><label>Tipo</label><select id="tipo"><option>Saída</option><option>Entrada</option></select></div>
+    <div><label>Natureza</label><select id="nat"><option>Variada</option><option>Fixa</option><option>Parcelada</option></select></div></div>
+    <label>Valor (R$)</label><input id="valor" type="number" step="0.01" inputmode="decimal">
+    <label>Descrição</label><input id="desc">
+    <label>Data</label><input id="data" type="date" value="${today()}">
+    <label>Categoria</label><select id="cat">${selOpts(cats,'Nome')}</select>
+    <div class="row"><div><label>Conta</label><select id="conta">${selOpts(contas,'Nome')}</select></div>
+    <div><label>Cartão</label><select id="cartao">${selOpts(carts,'Nome')}</select></div></div>
+    <label>Status</label><select id="status"><option>Confirmado</option><option>Previsto</option></select>
+    <button id="save">Salvar lançamento</button><div id="msg"></div></div>`;
+  sub.querySelector('#save').onclick=async()=>{const m=sub.querySelector('#msg');
+    const f={'Data':val('data'),'Descrição':val('desc'),'Valor':parseFloat(val('valor')||'0'),'Tipo':val('tipo'),'Natureza':val('nat'),'Categoria':val('cat'),'Conta':val('conta'),'Cartão':val('cartao'),'Status':val('status'),'Origem':'Manual'};
+    if(!f.Valor){m.innerHTML='<p class="err">Informe um valor.</p>';return;}
+    try{m.textContent='Salvando…';await addRow('Lançamentos',f);m.innerHTML='<p class="ok">✅ Salvo!</p>';sub.querySelector('#valor').value='';sub.querySelector('#desc').value='';}catch(e){m.innerHTML=`<p class="err">${e.message}</p>`;}};
+}
+function fParcelado(sub,cats,carts){
+  sub.innerHTML=`<div class="card">
+    <p class="muted">Só cadastra a compra. As parcelas são calculadas e exibidas em Gerir › Parcelados (o app mostra a atual).</p>
+    <label>Descrição</label><input id="desc" placeholder="ex: Notebook">
+    <div class="row"><div><label>Valor total (R$)</label><input id="total" type="number" step="0.01"></div>
+    <div><label>Nº de parcelas</label><input id="n" type="number" min="1" value="12"></div></div>
+    <label>Data da 1ª parcela (1º vencimento)</label><input id="d1" type="date" value="${today()}">
+    <label>Cartão</label><select id="cartao">${selOpts(carts,'Nome')}</select>
+    <label>Categoria</label><select id="cat">${selOpts(cats,'Nome')}</select>
+    <button id="save">Cadastrar compra parcelada</button><div id="msg"></div></div>`;
+  sub.querySelector('#save').onclick=async()=>{const m=sub.querySelector('#msg');
+    const desc=val('desc'),total=parseFloat(val('total')||'0'),n=parseInt(val('n')||'0'),d1=val('d1'),cartao=val('cartao'),cat=val('cat');
+    if(!desc||!total||!n){m.innerHTML='<p class="err">Preencha descrição, valor e nº de parcelas.</p>';return;}
+    try{m.textContent='Salvando…';
+      await addRow('Compras Parceladas',{'Descrição':desc,'Valor total':total,'Nº de parcelas':n,'Data da 1ª parcela':d1,'Cartão':cartao,'Categoria':cat});
+      m.innerHTML=`<p class="ok">✅ Compra cadastrada (${n}x de ${BRL(Math.round(total/n*100)/100)}).</p>`;}catch(e){m.innerHTML=`<p class="err">${e.message}</p>`;}};
+}
+function fFixo(sub,cats,carts,contas){
+  sub.innerHTML=`<div class="card">
+    <p class="muted">Cadastra um fixo recorrente. Use Gerir › Fixos para marcar pago/recebido a cada mês.</p>
+    <label>Nome</label><input id="nome" placeholder="ex: Aluguel">
+    <div class="row"><div><label>Tipo</label><select id="tipo"><option>Saída</option><option>Entrada</option></select></div>
+    <div><label>Valor (R$)</label><input id="valor" type="number" step="0.01"></div></div>
+    <label>Dia do mês</label><input id="dia" type="number" min="1" max="31" value="10">
+    <label>Categoria</label><select id="cat">${selOpts(cats,'Nome')}</select>
+    <div class="row"><div><label>Conta</label><select id="conta">${selOpts(contas,'Nome')}</select></div>
+    <div><label>Cartão</label><select id="cartao">${selOpts(carts,'Nome')}</select></div></div>
+    <button id="save">Cadastrar fixo</button><div id="msg"></div></div>`;
+  sub.querySelector('#save').onclick=async()=>{const m=sub.querySelector('#msg');
+    const f={'Nome':val('nome'),'Valor':parseFloat(val('valor')||'0'),'Tipo':val('tipo'),'Dia do mês':parseInt(val('dia')||'1'),'Categoria':val('cat'),'Conta':val('conta'),'Cartão':val('cartao'),'Ativo':true};
+    if(!f.Nome||!f.Valor){m.innerHTML='<p class="err">Preencha nome e valor.</p>';return;}
+    try{m.textContent='Salvando…';await addRow('Recorrências',f);m.innerHTML='<p class="ok">✅ Fixo cadastrado!</p>';}catch(e){m.innerHTML=`<p class="err">${e.message}</p>`;}};
 }
 
-// ---------- LISTS ----------
+let subG='cartoes';
+async function viewGerir(){
+  if(!cfg())return;
+  app.innerHTML='<div id="sb"></div><div id="sub"><div class="skel"></div></div>';
+  document.getElementById('sb').appendChild(seg([['cartoes','Cartões'],['categorias','Categorias'],['fixos','Fixos'],['parcelados','Parcelados']],subG,v=>{subG=v;viewGerir();}));
+  const sub=document.getElementById('sub');
+  try{
+    if(subG==='cartoes')await gCartoes(sub);
+    else if(subG==='categorias')await gCategorias(sub);
+    else if(subG==='fixos')await gFixos(sub);
+    else await gParcelados(sub);
+  }catch(e){sub.innerHTML=`<p class="err">${e.message}</p>`;}
+}
+async function gCartoes(sub){
+  const carts=await list('Cartões');
+  sub.innerHTML=`<div class="card">
+    <label>Nome do cartão</label><input id="nome" placeholder="ex: Nubank">
+    <div class="row"><div><label>Limite</label><input id="lim" type="number" step="0.01"></div>
+    <div><label>Fechamento (dia)</label><input id="fec" type="number" min="1" max="31"></div>
+    <div><label>Vencimento (dia)</label><input id="ven" type="number" min="1" max="31"></div></div>
+    <button id="add">Adicionar cartão</button><div id="msg"></div></div>
+    <h2>Seus cartões</h2><div>${carts.length?carts.map(c=>`<div class="item"><div>${c['Nome']||'—'}<br><small>fecha dia ${c['Dia de fechamento']||'?'} · vence dia ${c['Dia de vencimento']||'?'}</small></div><div class="val accent">${BRL(num(c['Limite']))}</div></div>`).join(''):'<p class="muted">Nenhum cartão ainda.</p>'}</div>`;
+  sub.querySelector('#add').onclick=async()=>{const m=sub.querySelector('#msg');const nome=val('nome');if(!nome){m.innerHTML='<p class="err">Informe o nome.</p>';return;}
+    try{m.textContent='Salvando…';await addRow('Cartões',{'Nome':nome,'Limite':parseFloat(val('lim')||'0'),'Dia de fechamento':parseInt(val('fec')||'0'),'Dia de vencimento':parseInt(val('ven')||'0')});await gCartoes(sub);}catch(e){m.innerHTML=`<p class="err">${e.message}</p>`;}};
+}
+async function gCategorias(sub){
+  const cats=await list('Categorias');
+  sub.innerHTML=`<div class="card">
+    <label>Nome da categoria</label><input id="nome" placeholder="ex: Mercado">
+    <label>Tipo</label><select id="tipo"><option>Saída</option><option>Entrada</option></select>
+    <button id="add">Adicionar categoria</button><div id="msg"></div></div>
+    <h2>Suas categorias</h2><div>${cats.length?cats.map(c=>`<div class="item"><div>${c['Nome']||'—'}</div><span class="pill">${c['Tipo']||''}</span></div>`).join(''):'<p class="muted">Nenhuma categoria ainda.</p>'}</div>`;
+  sub.querySelector('#add').onclick=async()=>{const m=sub.querySelector('#msg');const nome=val('nome');if(!nome){m.innerHTML='<p class="err">Informe o nome.</p>';return;}
+    try{m.textContent='Salvando…';await addRow('Categorias',{'Nome':nome,'Tipo':val('tipo')});await gCategorias(sub);}catch(e){m.innerHTML=`<p class="err">${e.message}</p>`;}};
+}
+async function gFixos(sub){
+  const [recs,lanc]=await Promise.all([list('Recorrências'),list('Lançamentos')]);
+  const pago=r=>lanc.some(l=>(l['Origem']||'')==='Recorrência'&&(l['Descrição']||'')===r['Nome']&&isThisMonth(l['Data']));
+  sub.innerHTML=`<p class="muted" style="margin:0 4px 12px">Pagar/Receber cria o lançamento confirmado do mês.</p><div>${
+    recs.length?recs.map((r,i)=>{const ent=r['Tipo']==='Entrada',p=pago(r);
+      return `<div class="item"><div>${r['Nome']||'—'}<br><small>dia ${r['Dia do mês']||'?'} · ${r['Tipo']||''} · ${r['Categoria']||''}</small></div>
+      <div style="display:flex;align-items:center;gap:10px"><span class="val ${ent?'green':'red'}" style="font-size:16px">${BRL(num(r['Valor']))}</span>
+      ${p?'<span class="pill">'+(ent?'recebido':'pago')+'</span>':`<button class="sm ${ent?'green':''}" data-i="${i}">${ent?'Receber':'Pagar'}</button>`}</div></div>`}).join(''):'<p class="muted">Nenhum fixo. Cadastre em Lançar › Fixo.</p>'}</div>`;
+  sub.querySelectorAll('button[data-i]').forEach(b=>b.onclick=async()=>{const r=recs[+b.dataset.i];b.textContent='…';
+    const now=new Date(),dd=String(Math.min(parseInt(r['Dia do mês']||'1')||1,28)).padStart(2,'0');
+    const data=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${dd}`;
+    try{await addRow('Lançamentos',{'Data':data,'Descrição':r['Nome'],'Valor':num(r['Valor']),'Tipo':r['Tipo'],'Natureza':'Fixa','Categoria':r['Categoria']||'','Status':'Confirmado','Origem':'Recorrência'});await gFixos(sub);}catch(e){b.textContent='erro';}});
+}
+async function gParcelados(sub){
+  const [parc,lanc]=await Promise.all([list('Compras Parceladas'),list('Lançamentos')]);
+  if(!parc.length){sub.innerHTML='<p class="muted">Nenhuma compra parcelada. Cadastre em Lançar › Parcelado.</p>';return;}
+  const pagos=new Set(lanc.filter(l=>(l['Origem']||'')==='Parcela').map(l=>l['Descrição']));
+  const hoje=today();
+  sub.innerHTML=parc.map((p,pi)=>{
+    const desc=p['Descrição']||'—',N=Math.max(1,parseInt(num(p['Nº de parcelas']))||1),total=num(p['Valor total']);
+    const d1=String(p['Data da 1ª parcela']||hoje).slice(0,10),vp=num(p['Valor da parcela'])||Math.round(total/N*100)/100;
+    const atual=Math.min(N,Math.max(1,monthsBetween(d1,hoje)+1)),dia=d1.slice(8,10),pct=Math.round(atual/N*100);
+    let linhas='';
+    for(let k=1;k<=N;k++){const data=addMonthsISO(d1,k-1),nome=`${k}ª Parcela da compra ${desc}`,pg=pagos.has(nome),eh=k===atual;
+      linhas+=`<div class="item" style="${eh&&!pg?'border-color:var(--accent)':''}"><div>${k}${eh?' <span class="pill">ATUAL</span>':''} &nbsp;<small>${fmtBR(data)}</small></div>
+        <div style="display:flex;align-items:center;gap:10px"><span class="val ${pg?'green':''}" style="font-size:15px">${BRL(vp)}</span>
+        ${pg?'<span class="pill">pago</span>':(eh?`<button class="sm green" data-p="${pi}" data-k="${k}">Pagar</button>`:'')}</div></div>`;}
+    return `<div class="card" style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;align-items:center"><b>${desc}</b><span class="pill">Parcela ${atual}/${N}</span></div>
+      <div class="bar" style="margin:10px 0"><i style="width:${pct}%"></i></div>
+      <div class="row"><div><small class="muted">POR PARCELA</small><div class="val accent" style="font-size:18px">${BRL(vp)}</div></div>
+      <div><small class="muted">VENCIMENTO</small><div style="font-weight:700">dia ${dia}</div></div>
+      <div><small class="muted">TOTAL</small><div style="font-weight:700">${BRL(total)}</div></div></div>
+      <details style="margin-top:10px"><summary class="muted" style="cursor:pointer">${N} parcelas — toque para ver todas</summary><div style="margin-top:8px">${linhas}</div></details></div>`;
+  }).join('');
+  sub.querySelectorAll('button[data-p]').forEach(b=>b.onclick=async()=>{const p=parc[+b.dataset.p],k=+b.dataset.k;b.textContent='…';
+    const N=Math.max(1,parseInt(num(p['Nº de parcelas']))||1),total=num(p['Valor total']),d1=String(p['Data da 1ª parcela']||hoje).slice(0,10);
+    const vp=num(p['Valor da parcela'])||Math.round(total/N*100)/100,data=addMonthsISO(d1,k-1);
+    try{await addRow('Lançamentos',{'Data':data,'Descrição':`${k}ª Parcela da compra ${p['Descrição']}`,'Valor':vp,'Tipo':'Saída','Natureza':'Parcelada','Categoria':p['Categoria']||'','Cartão':p['Cartão']||'','Status':'Confirmado','Origem':'Parcela'});await gParcelados(sub);}catch(e){b.textContent='erro';}});
+}
 async function viewLists(){
-  if(!LS.url||!LS.key){ app.innerHTML='<p class="muted">Configure primeiro em Config.</p>'; return; }
+  if(!cfg())return;
   app.innerHTML='<div class="skel"></div>';
   try{
-    const [lanc,cart,parc,rec,metas]=await Promise.all([list('Lançamentos'),list('Cartões'),list('Compras Parceladas'),list('Recorrências'),list('Metas')]);
-    const recent=lanc.slice(-10).reverse();
+    const [lanc,cart,parc,metas]=await Promise.all([list('Lançamentos'),list('Cartões'),list('Compras Parceladas'),list('Metas')]);
+    const recent=lanc.slice(-12).reverse();
     const I=(arr,fn)=>arr.length?arr.map(fn).join(''):'<p class="muted">Vazio.</p>';
     app.innerHTML=`
-      <h2>Lançamentos recentes</h2>
-      ${I(recent,r=>`<div class="item"><div>${r['Descrição']||'—'}<br><small>${(r['Data']||'').slice(0,10)} · ${r['Tipo']} · ${r['Natureza']||''}</small></div><div class="val ${r['Tipo']==='Entrada'?'green':'red'}">${BRL(num(r['Valor']))}</div></div>`)}
-      <h2>Cartões</h2>
-      ${I(cart,r=>`<div class="item"><div>${r['Nome']||'—'}<br><small>fecha dia ${r['Dia de fechamento']||'?'} · vence dia ${r['Dia de vencimento']||'?'}</small></div><div class="val accent">${BRL(num(r['Limite']))}</div></div>`)}
-      <h2>Compras parceladas</h2>
-      ${I(parc,r=>`<div class="item"><div>${r['Descrição']||'—'}<br><small>${r['Nº de parcelas']||'?'}x · ${r['Cartão']||''}</small></div><div class="val">${BRL(num(r['Valor total']))}</div></div>`)}
-      <h2>Fixos (recorrências)</h2>
-      ${I(rec,r=>`<div class="item"><div>${r['Nome']||'—'}<br><small>dia ${r['Dia do mês']||'?'} · ${r['Tipo']||''}</small></div><div class="val ${r['Tipo']==='Entrada'?'green':'red'}">${BRL(num(r['Valor']))}</div></div>`)}
-      <h2>Metas</h2>
-      ${I(metas,r=>{const a=num(r['Alvo']),p=num(r['Progresso atual']),pct=a?Math.min(100,Math.round(p/a*100)):0;
-        return `<div class="item" style="display:block"><div style="display:flex;justify-content:space-between"><span>${r['Nome']||'—'}</span><span class="pill">${pct}%</span></div><small>${p} / ${a} ${r['Unidade']||''}</small><div class="bar"><i style="width:${pct}%"></i></div></div>`})}
-    `;
-  }catch(e){ app.innerHTML=`<p class="err">${e.message}</p>`; }
+      <h2>Lançamentos recentes</h2>${I(recent,r=>`<div class="item"><div>${r['Descrição']||'—'}<br><small>${fmtBR(r['Data'])} · ${r['Tipo']} · ${r['Natureza']||''}</small></div><div class="val ${r['Tipo']==='Entrada'?'green':'red'}">${BRL(num(r['Valor']))}</div></div>`)}
+      <h2>Cartões</h2>${I(cart,r=>`<div class="item"><div>${r['Nome']||'—'}<br><small>fecha dia ${r['Dia de fechamento']||'?'} · vence dia ${r['Dia de vencimento']||'?'}</small></div><div class="val accent">${BRL(num(r['Limite']))}</div></div>`)}
+      <h2>Compras parceladas</h2>${I(parc,r=>`<div class="item"><div>${r['Descrição']||'—'}<br><small>${r['Nº de parcelas']||'?'}x · ${r['Cartão']||''}</small></div><div class="val">${BRL(num(r['Valor total']))}</div></div>`)}
+      <h2>Metas</h2>${I(metas,r=>{const a=num(r['Alvo']),p=num(r['Progresso atual']),pct=a?Math.min(100,Math.round(p/a*100)):0;
+        return `<div class="item" style="display:block"><div style="display:flex;justify-content:space-between"><span>${r['Nome']||'—'}</span><span class="pill">${pct}%</span></div><small>${p} / ${a} ${r['Unidade']||''}</small><div class="bar"><i style="width:${pct}%"></i></div></div>`})}`;
+  }catch(e){app.innerHTML=`<p class="err">${e.message}</p>`;}
 }
-
-// ---------- TIMER ----------
 let tick=null;
 function viewTimer(){
-  if(!LS.url||!LS.key){ app.innerHTML='<p class="muted">Configure primeiro em Config.</p>'; return; }
-  app.innerHTML=`
-    <h2>Cronômetro</h2>
-    <div class="card" style="text-align:center">
-      <p class="muted">Valor/hora: <b style="color:#b9b3ff">${BRL(LS.vh)}</b></p>
-      <div style="font-size:46px;font-weight:800;letter-spacing:2px;margin:10px 0" id="clock">00:00:00</div>
-      <div id="tbtn"></div>
-      <div id="msg"></div>
-    </div>
-    <p class="muted" style="margin-top:14px">Dica: no PC você também tem os atalhos globais (Ctrl+Alt+I/P/R/V) com um widget no canto da tela.</p>`;
-  const ls=k=>localStorage.getItem(k), t0='dl_t0';
-  function paint(){
-    const run=!!ls(t0);
-    document.getElementById('tbtn').innerHTML = run
-      ? '<button class="" style="background:linear-gradient(135deg,#fb7185,#f43f5e)" id="stop">Parar e lançar ganho</button>'
-      : '<button style="background:linear-gradient(135deg,#34d399,#10b981)" id="start">Iniciar</button>';
-    const s=document.getElementById('start'); if(s)s.onclick=()=>{localStorage.setItem(t0,String(Date.now()));paint();};
-    const st=document.getElementById('stop'); if(st)st.onclick=stop;
-  }
-  function upd(){ const clock=document.getElementById('clock'); if(!clock)return;
-    if(!ls(t0)){clock.textContent='00:00:00';return;} const s=Math.floor((Date.now()-Number(ls(t0)))/1000);
-    clock.textContent=[s/3600,s%3600/60,s%60].map(x=>String(Math.floor(x)).padStart(2,'0')).join(':'); }
-  async function stop(){ const msg=document.getElementById('msg'); const ini=new Date(Number(ls(t0))),fim=new Date();
-    const horas=(fim-ini)/3600000, valor=+(horas*LS.vh).toFixed(2);
-    try{ msg.textContent='Salvando…';
-      await addRow('Sessões de Trabalho',{'Início':ini.toISOString(),'Fim':fim.toISOString(),'Valor/hora':LS.vh});
-      if(valor>0) await addRow('Lançamentos',{'Data':today(),'Descrição':'Trabalho ('+horas.toFixed(2)+'h)','Valor':valor,'Tipo':'Entrada','Natureza':'Variada','Status':'Confirmado','Origem':'Cronômetro'});
-      localStorage.removeItem(t0); msg.innerHTML=`<p class="ok">✅ ${horas.toFixed(2)}h · ${BRL(valor)}</p>`; paint();
-    }catch(e){ msg.innerHTML=`<p class="err">${e.message}</p>`; } }
-  paint(); upd(); clearInterval(tick); tick=setInterval(upd,1000);
+  if(!cfg())return;
+  app.innerHTML=`<h2>Cronômetro</h2><div class="card" style="text-align:center">
+    <p class="muted">Valor/hora: <b style="color:#b9b3ff">${BRL(LS.vh)}</b></p>
+    <div style="font-size:46px;font-weight:800;letter-spacing:2px;margin:10px 0" id="clock">00:00:00</div>
+    <div id="tbtn"></div><div id="msg"></div></div>
+    <p class="muted" style="margin-top:14px">No PC há também os atalhos globais (Ctrl+Alt+I/P/R/V) com widget no canto.</p>`;
+  const t0='dl_t0',ls=k=>localStorage.getItem(k);
+  function paint(){const run=!!ls(t0);document.getElementById('tbtn').innerHTML=run?'<button style="background:linear-gradient(135deg,#fb7185,#f43f5e)" id="stop">Parar e lançar ganho</button>':'<button class="green" id="start">Iniciar</button>';
+    const s=document.getElementById('start');if(s)s.onclick=()=>{localStorage.setItem(t0,String(Date.now()));paint();};const st=document.getElementById('stop');if(st)st.onclick=stop;}
+  function upd(){const c=document.getElementById('clock');if(!c)return;if(!ls(t0)){c.textContent='00:00:00';return;}const s=Math.floor((Date.now()-Number(ls(t0)))/1000);c.textContent=[s/3600,s%3600/60,s%60].map(x=>String(Math.floor(x)).padStart(2,'0')).join(':');}
+  async function stop(){const m=document.getElementById('msg'),ini=new Date(Number(ls(t0))),fim=new Date(),horas=(fim-ini)/3600000,valor=+(horas*LS.vh).toFixed(2);
+    try{m.textContent='Salvando…';await addRow('Sessões de Trabalho',{'Início':ini.toISOString(),'Fim':fim.toISOString(),'Valor/hora':LS.vh});
+      if(valor>0)await addRow('Lançamentos',{'Data':today(),'Descrição':'Trabalho ('+horas.toFixed(2)+'h)','Valor':valor,'Tipo':'Entrada','Natureza':'Variada','Status':'Confirmado','Origem':'Cronômetro'});
+      localStorage.removeItem(t0);m.innerHTML=`<p class="ok">✅ ${horas.toFixed(2)}h · ${BRL(valor)}</p>`;paint();}catch(e){m.innerHTML=`<p class="err">${e.message}</p>`;}}
+  paint();upd();clearInterval(tick);tick=setInterval(upd,1000);
 }
-
-// ---------- CONFIG ----------
 function viewConfig(){
-  app.innerHTML=`
-    <h2>Configuração</h2>
-    <div class="card">
-      <label>URL do Worker</label><input id="c_url" value="${LS.url}" placeholder="https://...workers.dev">
-      <label>Chave de acesso (APP_KEY)</label><input id="c_key" type="password" value="${LS.key}" placeholder="sua chave">
-      <label>Valor por hora (R$)</label><input id="c_vh" type="number" step="0.01" value="${LS.vh||''}" placeholder="ex: 50">
-      <button id="csave">Salvar</button>
-      <button class="ghost" id="ctest">Testar conexão</button>
-      <div id="msg"></div>
-    </div>
-    <p class="muted" style="margin-top:14px">Esses dados ficam guardados só neste aparelho.</p>`;
-  document.getElementById('csave').onclick=()=>{LS.url=c_url.value.trim();LS.key=c_key.value.trim();LS.vh=parseFloat(c_vh.value||'0')||0;
-    document.getElementById('msg').innerHTML='<p class="ok">✅ Salvo.</p>';};
-  document.getElementById('ctest').onclick=async()=>{const msg=document.getElementById('msg');LS.url=c_url.value.trim();LS.key=c_key.value.trim();
-    try{msg.textContent='Testando…';const r=await list('Contas');msg.innerHTML=`<p class="ok">✅ Conectado! ${r.length} conta(s).</p>`;}
-    catch(e){msg.innerHTML=`<p class="err">${e.message}</p>`;}};
+  app.innerHTML=`<h2>Configuração</h2><div class="card">
+    <label>URL do Worker</label><input id="c_url" value="${LS.url}" placeholder="https://...workers.dev">
+    <label>Chave de acesso (APP_KEY)</label><input id="c_key" type="password" value="${LS.key}">
+    <label>Valor por hora (R$)</label><input id="c_vh" type="number" step="0.01" value="${LS.vh||''}">
+    <button id="csave">Salvar</button><button class="ghost" id="ctest">Testar conexão</button><div id="msg"></div></div>
+    <p class="muted" style="margin-top:14px">Esses dados ficam só neste aparelho.</p>`;
+  document.getElementById('csave').onclick=()=>{LS.url=val('c_url').trim();LS.key=val('c_key').trim();LS.vh=parseFloat(val('c_vh')||'0')||0;document.getElementById('msg').innerHTML='<p class="ok">✅ Salvo.</p>';};
+  document.getElementById('ctest').onclick=async()=>{const m=document.getElementById('msg');LS.url=val('c_url').trim();LS.key=val('c_key').trim();
+    try{m.textContent='Testando…';const r=await list('Contas');m.innerHTML=`<p class="ok">✅ Conectado! ${r.length} conta(s).</p>`;}catch(e){m.innerHTML=`<p class="err">${e.message}</p>`;}};
 }
-
-syncNav(); render();
+syncNav();render();
 </script>
 </body>
 </html>
