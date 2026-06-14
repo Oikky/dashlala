@@ -189,7 +189,8 @@ function drawMainChart(){
   const keys=chartFilter==='all'?Object.keys(SERIES):[chartFilter];
   const ra=REC.filter(r=>r['Ativo']!==false&&String(r['Ativo'])!=='false'),rE=ra.filter(r=>r['Tipo']==='Entrada').reduce((s,r)=>s+num(r['Valor']),0),rS=ra.filter(r=>r['Tipo']==='Saída').reduce((s,r)=>s+num(r['Valor']),0);
   const sval=(key,k)=>key==='sPar'?parcelasCicloTotal(PARC,k):key==='sFix'?rS:key==='eFix'?rE:LANC.filter(r=>inM(r,k)&&SERIES[key].f(r)).reduce((s,r)=>s+num(r['Valor']),0);
-  const datasets=keys.map(key=>({label:SERIES[key].label,backgroundColor:SERIES[key].color,borderRadius:6,data:months.map(m=>Math.round(sval(key,m.k)*100)/100)}));
+  const curK=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const datasets=keys.map(key=>({label:SERIES[key].label,backgroundColor:months.map(m=>SERIES[key].color+(m.k>curK?'4d':'')),borderRadius:6,data:months.map(m=>Math.round(sval(key,m.k)*100)/100)}));
   charts.push(new Chart(ctx,{type:'bar',data:{labels:months.map(m=>m.lb),datasets},options:{plugins:{legend:{display:keys.length>1,position:'bottom',labels:{boxWidth:12,padding:10}}},scales:{y:{grid:{color:'rgba(255,255,255,.06)'}},x:{grid:{display:false}}}}}));
 }
 function openModal(inner){const mo=document.getElementById('modal');mo.innerHTML=`<div class="modal"><div class="panel">${inner}</div></div>`;const m=mo.firstElementChild;m.onclick=e=>{if(e.target===m)closeModal();};}
