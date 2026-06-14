@@ -171,6 +171,17 @@ function drawMainChart(){
   charts.push(new Chart(ctx,{type:'bar',data:{labels:months.map(m=>m.lb),datasets},options:{plugins:{legend:{display:keys.length>1,position:'bottom',labels:{boxWidth:12,padding:10}}},scales:{y:{grid:{color:'rgba(255,255,255,.06)'}},x:{grid:{display:false}}}}}));
 }
 function openModal(inner){const mo=document.getElementById('modal');mo.innerHTML=`<div class="modal"><div class="panel">${inner}</div></div>`;const m=mo.firstElementChild;m.onclick=e=>{if(e.target===m)closeModal();};}
+function wireCatAdd(sel){sel.dataset.prev=sel.value;sel.onchange=()=>{
+  if(sel.value==='__add__'){sel.value=sel.dataset.prev||'';modalAddCat(nome=>{const add=sel.querySelector('option[value="__add__"]');const o=document.createElement('option');o.textContent=nome;sel.insertBefore(o,add);sel.value=nome;sel.dataset.prev=nome;});}
+  else sel.dataset.prev=sel.value;};}
+function modalAddCat(onAdded){
+  openModal(`<div class="ph"><b>Nova categoria</b><button class="ghost sm" onclick="closeModal()">Fechar</button></div>
+    <label>Nome</label><input id="acn" placeholder="ex: Mercado"><label>Tipo</label><select id="act"><option>Saída</option><option>Entrada</option></select>
+    <button id="acs">Adicionar</button><div id="acm"></div>`);
+  setTimeout(()=>{const i=document.getElementById('acn');if(i)i.focus();},50);
+  document.getElementById('acs').onclick=async()=>{const m=document.getElementById('acm'),n=val('acn');if(!n){m.innerHTML='<p class="err">Informe o nome.</p>';return;}
+    try{m.textContent='Salvando…';await addRow('Categorias',{'Nome':n,'Tipo':val('act')});closeModal();onAdded(n);}catch(e){m.innerHTML=`<p class="err">${e.message}</p>`;}};
+}
 
 let subL='avulso';
 async function viewLancar(){
@@ -180,6 +191,7 @@ async function viewLancar(){
   const sub=document.getElementById('sub');let cats=[],carts=[],contas=[];
   try{[cats,carts,contas]=await Promise.all([list('Categorias'),list('Cartões'),list('Contas')]);}catch(e){sub.innerHTML=`<p class="err">${e.message}</p>`;return;}
   if(subL==='avulso')fAvulso(sub,cats,carts,contas);else if(subL==='parcelado')fParcelado(sub,cats,carts);else fFixo(sub,cats,carts,contas);
+  const cs=document.getElementById('cat');if(cs)wireCatAdd(cs);
 }
 function fAvulso(sub,cats,carts,contas){
   sub.innerHTML=`<div class="panel">
@@ -187,7 +199,7 @@ function fAvulso(sub,cats,carts,contas){
     <div><label>Natureza</label><select id="nat"><option>Variada</option><option>Fixa</option><option>Parcelada</option></select></div></div>
     <label>Valor (R$)</label><input id="valor" type="number" step="0.01" inputmode="decimal">
     <label>Descrição</label><input id="desc"><label>Data</label><input id="data" type="date" value="${today()}">
-    <label>Categoria</label><select id="cat">${selOpts(cats,'Nome')}</select>
+    <label>Categoria</label><select id="cat">${selOpts(cats,'Nome')}<option value="__add__">➕ Adicionar categoria…</option></select>
     <div class="row"><div><label>Conta</label><select id="conta">${selOpts(contas,'Nome')}</select></div><div><label>Cartão</label><select id="cartao">${selOpts(carts,'Nome')}</select></div></div>
     <label>Status</label><select id="status"><option>Confirmado</option><option>Previsto</option></select>
     <button id="save">Salvar lançamento</button><div id="msg"></div></div>`;
@@ -201,7 +213,7 @@ function fParcelado(sub,cats,carts){
     <label>Descrição</label><input id="desc" placeholder="ex: Notebook">
     <div class="row"><div><label>Valor total (R$)</label><input id="total" type="number" step="0.01"></div><div><label>Nº de parcelas</label><input id="n" type="number" min="1" value="12"></div></div>
     <label>Data da 1ª parcela (1º vencimento)</label><input id="d1" type="date" value="${today()}">
-    <label>Cartão</label><select id="cartao">${selOpts(carts,'Nome')}</select><label>Categoria</label><select id="cat">${selOpts(cats,'Nome')}</select>
+    <label>Cartão</label><select id="cartao">${selOpts(carts,'Nome')}</select><label>Categoria</label><select id="cat">${selOpts(cats,'Nome')}<option value="__add__">➕ Adicionar categoria…</option></select>
     <button id="save">Cadastrar compra parcelada</button><div id="msg"></div></div>`;
   sub.querySelector('#save').onclick=async()=>{const m=sub.querySelector('#msg');
     const desc=val('desc'),total=parseFloat(val('total')||'0'),n=parseInt(val('n')||'0'),d1=val('d1'),cartao=val('cartao'),cat=val('cat');
@@ -213,7 +225,7 @@ function fFixo(sub,cats,carts,contas){
   sub.innerHTML=`<div class="panel"><p class="muted">Cadastra um fixo recorrente. Use Gerir › Fixos para pagar/receber no mês.</p>
     <label>Nome</label><input id="nome" placeholder="ex: Aluguel">
     <div class="row"><div><label>Tipo</label><select id="tipo"><option>Saída</option><option>Entrada</option></select></div><div><label>Valor (R$)</label><input id="valor" type="number" step="0.01"></div></div>
-    <label>Dia do mês</label><input id="dia" type="number" min="1" max="31" value="10"><label>Categoria</label><select id="cat">${selOpts(cats,'Nome')}</select>
+    <label>Dia do mês</label><input id="dia" type="number" min="1" max="31" value="10"><label>Categoria</label><select id="cat">${selOpts(cats,'Nome')}<option value="__add__">➕ Adicionar categoria…</option></select>
     <div class="row"><div><label>Conta</label><select id="conta">${selOpts(contas,'Nome')}</select></div><div><label>Cartão</label><select id="cartao">${selOpts(carts,'Nome')}</select></div></div>
     <button id="save">Cadastrar fixo</button><div id="msg"></div></div>`;
   sub.querySelector('#save').onclick=async()=>{const m=sub.querySelector('#msg');
@@ -357,19 +369,18 @@ async function viewConfig(){
     <h2>Avançado</h2><div class="panel"><button class="ghost" id="toggle">Mostrar conexão (Worker / chave)</button><div id="adv" style="display:none">
       <label>URL do Worker</label><input id="c_url" value="${LS.url}"><label>Chave de acesso</label><input id="c_key" type="password" value="${LS.key}">
       <button id="csave">Salvar conexão</button><button class="ghost" id="ctest">Testar</button><div id="m2"></div></div></div>`;
-  document.getElementById('svh').onclick=()=>{LS.vh=parseFloat(val('c_vh')||'0')||0;document.getElementById('m1').innerHTML='<p class="ok">✅ Salvo.</p>';};
+  document.getElementById('svh').onclick=()=>{LS.vh=parseFloat(val('c_vh')||'0')||0;document.getElementById('m1').innerHTML='<p class="ok">Salvo.</p>';};
   document.getElementById('toggle').onclick=()=>{const a=document.getElementById('adv');a.style.display=a.style.display==='none'?'block':'none';};
-  document.getElementById('csave').onclick=()=>{LS.url=val('c_url').trim();LS.key=val('c_key').trim();document.getElementById('m2').innerHTML='<p class="ok">✅ Salvo.</p>';};
-  document.getElementById('ctest').onclick=async()=>{const m=document.getElementById('m2');LS.url=val('c_url').trim();LS.key=val('c_key').trim();try{m.textContent='Testando…';const r=await list('Contas');m.innerHTML=`<p class="ok">✅ Conectado! ${r.length} conta(s).</p>`;}catch(e){m.innerHTML=`<p class="err">${e.message}</p>`;}};
+  document.getElementById('csave').onclick=()=>{LS.url=val('c_url').trim();LS.key=val('c_key').trim();document.getElementById('m2').innerHTML='<p class="ok">Salvo.</p>';};
+  document.getElementById('ctest').onclick=async()=>{const m=document.getElementById('m2');LS.url=val('c_url').trim();LS.key=val('c_key').trim();try{m.textContent='Testando…';const r=await list('Contas');m.innerHTML=`<p class="ok">Conectado! ${r.length} conta(s).</p>`;}catch(e){m.innerHTML=`<p class="err">${e.message}</p>`;}};
   if(LS.url&&LS.key)loadCats();
   async function loadCats(){const box=document.getElementById('catbox');try{const cats=await list('Categorias');
     box.innerHTML=`<label>Nova categoria</label><input id="cn" placeholder="ex: Mercado"><label>Tipo</label><select id="ct"><option>Saída</option><option>Entrada</option></select><button id="cadd">Adicionar</button><div id="m3"></div>
       <div style="margin-top:12px">${cats.length?cats.map(c=>`<div class="item"><div>${c['Nome']||'—'}</div><span class="pill">${c['Tipo']||''}</span></div>`).join(''):'<p class="muted">Nenhuma categoria.</p>'}</div>`;
-    document.getElementById('cadd').onclick=async()=>{const m=document.getElementById('m3');const n=val('cn');if(!n){m.innerHTML='<p class="err">Informe o nome.</p>';return;}
+    document.getElementById('cadd').onclick=async()=>{const m=document.getElementById('m3'),n=val('cn');if(!n){m.innerHTML='<p class="err">Informe o nome.</p>';return;}
       try{m.textContent='Salvando…';await addRow('Categorias',{'Nome':n,'Tipo':val('ct')});loadCats();}catch(e){m.innerHTML=`<p class="err">${e.message}</p>`;}};
   }catch(e){box.innerHTML=`<p class="err">${e.message}</p>`;}}
 }
-
 syncNav();render();
 </script>
 </body>
