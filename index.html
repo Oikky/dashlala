@@ -65,6 +65,12 @@
   @keyframes sh{from{background-position:200% 0}to{background-position:-200% 0}}
   .modal{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.6);display:flex;align-items:flex-start;justify-content:center;padding:30px 16px;overflow:auto}
   .modal .panel{max-width:460px;width:100%}
+  .cc{border:1px solid var(--cardLine);border-radius:16px;overflow:hidden;background:var(--card);box-shadow:var(--shadow)}
+  .cc-band{height:60px;padding:12px 14px;display:flex;justify-content:space-between;align-items:flex-start;color:#fff;font-weight:800;font-size:15px}
+  .cc-chip{width:30px;height:22px;border-radius:5px;background:linear-gradient(135deg,#ffe08a,#c9a227)}
+  .cc-body{padding:12px 14px}
+  .delx{background:none;border:none;color:var(--muted);box-shadow:none;width:auto;margin:0;padding:2px 6px;font-size:15px;cursor:pointer}
+  .delx:hover{color:var(--red)}
 </style>
 </head>
 <body>
@@ -88,6 +94,9 @@ async function api(method,path,body){
 }
 const list=name=>api('GET',`/tables/${encodeURIComponent(name)}/rows`).then(d=>d.rows||[]);
 const addRow=(name,f)=>api('POST',`/tables/${encodeURIComponent(name)}/rows`,{rows:[f]});
+const delRow=(name,id)=>api('DELETE',`/tables/${encodeURIComponent(name)}/rows/${encodeURIComponent(id)}`);
+const CCOL=['linear-gradient(135deg,#7c6cff,#5b8cff)','linear-gradient(135deg,#fb7185,#f59e0b)','linear-gradient(135deg,#34d399,#22d3ee)','linear-gradient(135deg,#a78bfa,#f472b6)','linear-gradient(135deg,#22d3ee,#3b82f6)'];
+function formaPg(){const el=document.getElementById('forma'),v=el?el.value:'';return {'Conta':v.indexOf('conta::')===0?v.slice(7):'','Cartão':v.indexOf('cartao::')===0?v.slice(8):''};}
 function num(v){if(typeof v==='number')return v;if(!v)return 0;const n=parseFloat(String(v).replace(/[^\d.,-]/g,'').replace(/\.(?=\d{3})/g,'').replace(',','.'));return isNaN(n)?0:n;}
 function isThisMonth(d){if(!d)return false;const dt=new Date(d),n=new Date();return dt.getFullYear()===n.getFullYear()&&dt.getMonth()===n.getMonth();}
 function today(){return new Date().toISOString().slice(0,10);}
@@ -206,11 +215,11 @@ function fAvulso(sub,cats,carts,contas){
     <label>Valor (R$)</label><input id="valor" type="number" step="0.01" inputmode="decimal">
     <label>Descrição</label><input id="desc"><label>Data</label><input id="data" type="date" value="${today()}">
     <label>Categoria</label><select id="cat">${selOpts(cats,'Nome')}<option value="__add__">➕ Adicionar categoria…</option></select>
-    <div class="row"><div><label>Conta</label><select id="conta">${selOpts(contas,'Nome')}</select></div><div><label>Cartão</label><select id="cartao">${selOpts(carts,'Nome')}</select></div></div>
+    <label>Forma de pagamento</label><select id="forma"><option value="">— selecione —</option><optgroup label="À vista / débito">${contas.map(a=>`<option value="conta::${a['Nome']}">${a['Nome']}</option>`).join('')}</optgroup><optgroup label="Crédito (cartão)">${carts.map(cc=>`<option value="cartao::${cc['Nome']}">${cc['Nome']}</option>`).join('')}</optgroup></select>
     <label>Status</label><select id="status"><option>Confirmado</option><option>Previsto</option></select>
     <button id="save">Salvar lançamento</button><div id="msg"></div></div>`;
   sub.querySelector('#save').onclick=async()=>{const m=sub.querySelector('#msg');
-    const f={'Data':val('data'),'Descrição':val('desc'),'Valor':parseFloat(val('valor')||'0'),'Tipo':val('tipo'),'Natureza':val('nat'),'Categoria':val('cat'),'Conta':val('conta'),'Cartão':val('cartao'),'Status':val('status'),'Origem':'Manual'};
+    const f={'Data':val('data'),'Descrição':val('desc'),'Valor':parseFloat(val('valor')||'0'),'Tipo':val('tipo'),'Natureza':val('nat'),'Categoria':val('cat'),...formaPg(),'Status':val('status'),'Origem':'Manual'};
     if(!f.Valor){m.innerHTML='<p class="err">Informe um valor.</p>';return;}
     try{m.textContent='Salvando…';await addRow('Lançamentos',f);m.innerHTML='<p class="ok">✅ Salvo!</p>';sub.querySelector('#valor').value='';sub.querySelector('#desc').value='';}catch(e){m.innerHTML=`<p class="err">${e.message}</p>`;}};
 }
@@ -232,43 +241,63 @@ function fFixo(sub,cats,carts,contas){
     <label>Nome</label><input id="nome" placeholder="ex: Aluguel">
     <div class="row"><div><label>Tipo</label><select id="tipo"><option>Saída</option><option>Entrada</option></select></div><div><label>Valor (R$)</label><input id="valor" type="number" step="0.01"></div></div>
     <label>Dia do mês</label><input id="dia" type="number" min="1" max="31" value="10"><label>Categoria</label><select id="cat">${selOpts(cats,'Nome')}<option value="__add__">➕ Adicionar categoria…</option></select>
-    <div class="row"><div><label>Conta</label><select id="conta">${selOpts(contas,'Nome')}</select></div><div><label>Cartão</label><select id="cartao">${selOpts(carts,'Nome')}</select></div></div>
+    <label>Forma de pagamento</label><select id="forma"><option value="">— selecione —</option><optgroup label="À vista / débito">${contas.map(a=>`<option value="conta::${a['Nome']}">${a['Nome']}</option>`).join('')}</optgroup><optgroup label="Crédito (cartão)">${carts.map(cc=>`<option value="cartao::${cc['Nome']}">${cc['Nome']}</option>`).join('')}</optgroup></select>
     <button id="save">Cadastrar fixo</button><div id="msg"></div></div>`;
   sub.querySelector('#save').onclick=async()=>{const m=sub.querySelector('#msg');
-    const f={'Nome':val('nome'),'Valor':parseFloat(val('valor')||'0'),'Tipo':val('tipo'),'Dia do mês':parseInt(val('dia')||'1'),'Categoria':val('cat'),'Conta':val('conta'),'Cartão':val('cartao'),'Ativo':true};
+    const f={'Nome':val('nome'),'Valor':parseFloat(val('valor')||'0'),'Tipo':val('tipo'),'Dia do mês':parseInt(val('dia')||'1'),'Categoria':val('cat'),...formaPg(),'Ativo':true};
     if(!f.Nome||!f.Valor){m.innerHTML='<p class="err">Preencha nome e valor.</p>';return;}
     try{m.textContent='Salvando…';await addRow('Recorrências',f);m.innerHTML='<p class="ok">✅ Fixo cadastrado!</p>';}catch(e){m.innerHTML=`<p class="err">${e.message}</p>`;}};
 }
 
-let subG='cartoes';
+let subG='contas';
 async function viewGerir(){
   if(!cfg())return;
   app.innerHTML='<div id="sb"></div><div id="sub"><div class="skel"></div></div>';
-  document.getElementById('sb').appendChild(seg([['cartoes','Cartões'],['fixos','Fixos'],['parcelados','Parcelados']],subG,v=>{subG=v;viewGerir();}));
+  document.getElementById('sb').appendChild(seg([['contas','Contas'],['fixos','Fixos'],['parcelados','Parcelados']],subG,v=>{subG=v;viewGerir();}));
   const sub=document.getElementById('sub');
-  try{if(subG==='cartoes')await gCartoes(sub);else if(subG==='fixos')await gFixos(sub);else await gParcelados(sub);}catch(e){sub.innerHTML=`<p class="err">${e.message}</p>`;}
+  try{if(subG==='contas')await gContas(sub);else if(subG==='fixos')await gFixos(sub);else await gParcelados(sub);}catch(e){sub.innerHTML=`<p class="err">${e.message}</p>`;}
 }
-async function gCartoes(sub){
-  const [carts,lanc,parc,faturas]=await Promise.all([list('Cartões'),list('Lançamentos'),list('Compras Parceladas'),list('Faturas')]);
+async function gContas(sub){
+  const [contas,carts,lanc,parc,faturas]=await Promise.all([list('Contas'),list('Cartões'),list('Lançamentos'),list('Compras Parceladas'),list('Faturas')]);
+  const saldo=nome=>{let s=num((contas.find(a=>a['Nome']===nome)||{})['Saldo inicial']);lanc.forEach(l=>{if((l['Conta']||'')===nome&&(l['Status']||'')==='Confirmado')s+=(l['Tipo']==='Entrada'?1:-1)*num(l['Valor']);});return Math.round(s*100)/100;};
   const paga=(nome,ciclo)=>faturas.some(f=>(f['Cartão']||'')===nome&&(f['Ciclo']||'')===ciclo&&(f['Status']||'')==='Paga');
-  sub.innerHTML=`<div class="ph"><b>Seus cartões</b><button class="sm" id="add">+ Adicionar cartão</button></div>
-    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr))">${
-    carts.length?carts.map((c,i)=>{const lim=num(c['Limite']),clo=parseInt(num(c['Dia de fechamento']))||31,ciclo=faturaCiclo(today(),clo),tot=faturaTotal(lanc,parc,c['Nome'],clo,ciclo),pct=lim?Math.min(100,Math.round(tot/lim*100)):0,pg=paga(c['Nome'],ciclo);
-      return `<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><b>${c['Nome']||'—'}</b><span class="pill">venc dia ${c['Dia de vencimento']||'?'}</span></div>
-      <div class="muted" style="margin-top:8px;font-size:12px">Fatura ${cicloLabel(ciclo)} ${pg?'· paga':''}</div><div class="${pg?'green':''}" style="font-weight:800;font-size:18px">${BRL(tot)} <span class="muted" style="font-weight:400;font-size:13px">/ ${BRL(lim)}</span></div>
+  const cc=(c,gi)=>{const i=carts.indexOf(c),lim=num(c['Limite']),clo=parseInt(num(c['Dia de fechamento']))||31,ciclo=faturaCiclo(today(),clo),tot=faturaTotal(lanc,parc,c['Nome'],clo,ciclo),pct=lim?Math.min(100,Math.round(tot/lim*100)):0,pg=paga(c['Nome'],ciclo);
+    return `<div class="cc"><div class="cc-band" style="background:${CCOL[gi%CCOL.length]}"><span>${c['Nome']||'—'}</span><span class="cc-chip"></span></div><div class="cc-body">
+      <div class="muted" style="font-size:12px">Fatura ${cicloLabel(ciclo)} ${pg?'· paga':''}</div><div class="${pg?'green':''}" style="font-weight:800">${BRL(tot)} <span class="muted" style="font-weight:400;font-size:12px">/ ${BRL(lim)}</span></div>
       <div class="bar"><i class="${pct>80?'hot':''}" style="width:${pct}%"></i></div>
-      <div style="display:flex;gap:8px;margin-top:12px">${pg?'<span class="pill">fatura paga</span>':`<button class="sm green" data-pay="${i}">Pagar fatura</button>`}<button class="sm ghost" data-i="${i}">Ver faturas</button></div></div>`}).join(''):'<p class="muted">Nenhum cartão. Toque em Adicionar.</p>'}</div>`;
-  sub.querySelector('#add').onclick=()=>modalCartao();
-  sub.querySelectorAll('button[data-i]').forEach(el=>el.onclick=()=>modalFaturas(carts[+el.dataset.i],lanc,parc,faturas));
-  sub.querySelectorAll('button[data-pay]').forEach(el=>el.onclick=()=>{const c=carts[+el.dataset.pay],clo=parseInt(num(c['Dia de fechamento']))||31;modalPagarFatura(c,faturaCiclo(today(),clo),lanc,parc);});
+      <div class="muted" style="font-size:11px;margin-top:6px">fecha dia ${clo} · vence dia ${c['Dia de vencimento']||'?'}</div>
+      <div style="display:flex;gap:8px;margin-top:10px;align-items:center">${pg?'<span class="pill">paga</span>':`<button class="sm green" data-pay="${i}">Pagar fatura</button>`}<button class="sm ghost" data-ver="${i}">Faturas</button><button class="delx" data-delcard="${i}" title="Remover">🗑</button></div></div></div>`;};
+  let html=`<div class="ph"><b>Contas</b><button class="sm" id="addc">+ Adicionar conta</button></div>`;
+  if(!contas.length)html+='<p class="muted">Nenhuma conta. Toque em Adicionar conta.</p>';
+  contas.forEach((a,gi)=>{const cs=carts.filter(c=>(c['Conta']||'')===a['Nome']);
+    html+=`<div class="panel" style="margin-bottom:14px"><div class="ph"><div><b>${a['Nome']}</b> <span class="pill">${a['Tipo']||''}</span><div class="val ${saldo(a['Nome'])>=0?'green':'red'}" style="font-size:20px">${BRL(saldo(a['Nome']))}</div></div><div><button class="sm ghost" data-addcard="${gi}">+ Cartão</button> <button class="delx" data-delconta="${gi}" title="Remover">🗑</button></div></div>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(230px,1fr))">${cs.length?cs.map(c=>cc(c,gi)).join(''):'<p class="muted" style="font-size:13px">Sem cartões nesta conta.</p>'}</div></div>`;});
+  const sem=carts.filter(c=>!(c['Conta']&&String(c['Conta']).trim()));
+  if(sem.length)html+=`<div class="panel"><b class="muted">Cartões sem conta</b><div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(230px,1fr));margin-top:10px">${sem.map(c=>cc(c,4)).join('')}</div></div>`;
+  sub.innerHTML=html;
+  sub.querySelector('#addc').onclick=()=>modalConta();
+  sub.querySelectorAll('button[data-addcard]').forEach(b=>b.onclick=()=>modalCartao(contas[+b.dataset.addcard]['Nome']));
+  sub.querySelectorAll('button[data-pay]').forEach(b=>b.onclick=()=>{const c=carts[+b.dataset.pay],clo=parseInt(num(c['Dia de fechamento']))||31;modalPagarFatura(c,faturaCiclo(today(),clo),lanc,parc);});
+  sub.querySelectorAll('button[data-ver]').forEach(b=>b.onclick=()=>modalFaturas(carts[+b.dataset.ver],lanc,parc,faturas));
+  sub.querySelectorAll('button[data-delcard]').forEach(b=>b.onclick=async()=>{const c=carts[+b.dataset.delcard];if(!confirm('Remover o cartão '+c['Nome']+'?'))return;try{await delRow('Cartões',c.id);gContas(sub);}catch(e){alert(e.message);}});
+  sub.querySelectorAll('button[data-delconta]').forEach(b=>b.onclick=async()=>{const a=contas[+b.dataset.delconta];if(!confirm('Remover a conta '+a['Nome']+'?'))return;try{await delRow('Contas',a.id);gContas(sub);}catch(e){alert(e.message);}});
 }
-function modalCartao(){
+function modalConta(){
+  openModal(`<div class="ph"><b>Nova conta</b><button class="ghost sm" onclick="closeModal()">Fechar</button></div>
+    <label>Nome</label><input id="nome" placeholder="ex: Nubank"><label>Tipo</label><select id="tipo"><option>Banco</option><option>Carteira</option><option>Outro</option></select>
+    <label>Saldo inicial (R$)</label><input id="si" type="number" step="0.01" value="0"><button id="sv">Salvar</button><div id="msg"></div>`);
+  document.getElementById('sv').onclick=async()=>{const m=document.getElementById('msg'),nome=val('nome');if(!nome){m.innerHTML='<p class="err">Informe o nome.</p>';return;}
+    try{m.textContent='Salvando…';await addRow('Contas',{'Nome':nome,'Tipo':val('tipo'),'Saldo inicial':parseFloat(val('si')||'0')});closeModal();render();}catch(e){m.innerHTML=`<p class="err">${e.message}</p>`;}};
+}
+async function modalCartao(prefill){
+  const contas=await list('Contas').catch(()=>[]);
   openModal(`<div class="ph"><b>Novo cartão</b><button class="ghost sm" onclick="closeModal()">Fechar</button></div>
-    <label>Nome</label><input id="nome" placeholder="ex: Nubank"><label>Limite</label><input id="lim" type="number" step="0.01">
-    <div class="row"><div><label>Fechamento (dia padrão)</label><input id="fec" type="number" min="1" max="31"></div><div><label>Vencimento (dia)</label><input id="ven" type="number" min="1" max="31"></div></div>
+    <label>Nome</label><input id="nome" placeholder="ex: Nubank"><label>Conta vinculada</label><select id="cta">${selOpts(contas,'Nome',prefill||'')}</select>
+    <label>Limite</label><input id="lim" type="number" step="0.01">
+    <div class="row"><div><label>Fechamento (dia)</label><input id="fec" type="number" min="1" max="31"></div><div><label>Vencimento (dia)</label><input id="ven" type="number" min="1" max="31"></div></div>
     <button id="sv">Salvar</button><div id="msg"></div>`);
   document.getElementById('sv').onclick=async()=>{const m=document.getElementById('msg');const nome=val('nome');if(!nome){m.innerHTML='<p class="err">Informe o nome.</p>';return;}
-    try{m.textContent='Salvando…';await addRow('Cartões',{'Nome':nome,'Limite':parseFloat(val('lim')||'0'),'Dia de fechamento':parseInt(val('fec')||'0'),'Dia de vencimento':parseInt(val('ven')||'0')});closeModal();render();}catch(e){m.innerHTML=`<p class="err">${e.message}</p>`;}};
+    try{m.textContent='Salvando…';await addRow('Cartões',{'Nome':nome,'Conta':val('cta'),'Limite':parseFloat(val('lim')||'0'),'Dia de fechamento':parseInt(val('fec')||'0'),'Dia de vencimento':parseInt(val('ven')||'0')});closeModal();render();}catch(e){m.innerHTML=`<p class="err">${e.message}</p>`;}};
 }
 function modalFaturas(c,lanc,parc,faturas){
   const clo=parseInt(num(c['Dia de fechamento']))||31,now=new Date(),linhas=[];
@@ -292,7 +321,7 @@ function modalPagarFatura(c,ciclo,lanc,parc){
     const a=ciclo.split('-'),y=a[0],mo=a[1],dd=String(Math.min(ven,28)).padStart(2,'0'),dataVenc=`${y}-${mo}-${dd}`;
     try{m.textContent='Pagando…';
       await addRow('Faturas',{'Cartão':c['Nome'],'Ciclo':ciclo,'Data de fechamento':`${y}-${mo}-${String(Math.min(clo,28)).padStart(2,'0')}`,'Data de vencimento':dataVenc,'Status':'Paga','Valor':total});
-      await addRow('Lançamentos',{'Data':dataVenc,'Descrição':`Fatura ${c['Nome']} ${cicloLabel(ciclo)}`,'Valor':total,'Tipo':'Saída','Natureza':'Fatura','Status':'Confirmado','Origem':'Fatura'});
+      await addRow('Lançamentos',{'Data':dataVenc,'Descrição':`Fatura ${c['Nome']} ${cicloLabel(ciclo)}`,'Valor':total,'Tipo':'Saída','Natureza':'Fatura','Status':'Confirmado','Conta':c['Conta']||'','Origem':'Fatura'});
       closeModal();render();}catch(e){m.innerHTML=`<p class="err">${e.message}</p>`;}};
 }
 async function gFixos(sub){
@@ -303,10 +332,11 @@ async function gFixos(sub){
    recs.length?recs.map((r,i)=>{const ent=r['Tipo']==='Entrada',p=pago(r);
     return `<div class="card"><div class="clk" data-h="${i}" style="cursor:pointer"><div style="display:flex;justify-content:space-between;align-items:center"><b>${r['Nome']||'—'}</b><span class="pill">dia ${r['Dia do mês']||'?'}</span></div>
     <div class="val ${ent?'green':'red'}" style="font-size:20px;margin-top:6px">${BRL(num(r['Valor']))}</div><div class="muted" style="font-size:12px">${r['Tipo']} · ${r['Categoria']||''}</div></div>
-    <div style="margin-top:10px">${p?'<span class="pill">'+(ent?'recebido este mês':'pago este mês')+'</span>':`<button class="sm ${ent?'green':'amber'}" data-i="${i}">${ent?'Receber':'Pagar'}</button>`}</div></div>`}).join(''):'<p class="muted">Nenhum fixo. Cadastre em Lançar › Fixo.</p>'}</div>`;
+    <div style="margin-top:10px;display:flex;gap:8px;align-items:center">${p?'<span class="pill">'+(ent?'recebido este mês':'pago este mês')+'</span>':`<button class="sm ${ent?'green':'amber'}" data-i="${i}">${ent?'Receber':'Pagar'}</button>`}<button class="delx" data-del="${i}" title="Remover">🗑</button></div></div>`}).join(''):'<p class="muted">Nenhum fixo. Cadastre em Lançar › Fixo.</p>'}</div>`;
   sub.querySelectorAll('button[data-i]').forEach(b=>b.onclick=async()=>{const r=recs[+b.dataset.i];b.textContent='…';
     const now=new Date(),dd=String(Math.min(parseInt(r['Dia do mês']||'1')||1,28)).padStart(2,'0'),data=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${dd}`;
     try{await addRow('Lançamentos',{'Data':data,'Descrição':r['Nome'],'Valor':num(r['Valor']),'Tipo':r['Tipo'],'Natureza':'Fixa','Categoria':r['Categoria']||'','Status':'Confirmado','Origem':'Recorrência'});await gFixos(sub);}catch(e){b.textContent='erro';}});
+  sub.querySelectorAll('button[data-del]').forEach(b=>b.onclick=async()=>{const r=recs[+b.dataset.del];if(!confirm('Remover o fixo '+r['Nome']+'?'))return;try{await delRow('Recorrências',r.id);gFixos(sub);}catch(e){alert(e.message);}});
   sub.querySelectorAll('.clk[data-h]').forEach(el=>el.onclick=()=>{const r=recs[+el.dataset.h];
     const hist=lanc.filter(l=>(l['Origem']||'')==='Recorrência'&&(l['Descrição']||'')===r['Nome']).sort((a,b)=>String(b['Data']).localeCompare(String(a['Data']))).slice(0,12);
     openModal(`<div class="ph"><b>${r['Nome']} — últimos pagamentos</b><button class="ghost sm" onclick="closeModal()">Fechar</button></div>${hist.length?hist.map(l=>`<div class="item"><div>${fmtBR(l['Data'])}</div><div class="val ${r['Tipo']==='Entrada'?'green':'red'}" style="font-size:15px">${BRL(num(l['Valor']))}</div></div>`).join(''):'<p class="muted">Nenhum pagamento registrado ainda.</p>'}`);});
@@ -315,16 +345,17 @@ async function gParcelados(sub){
   const parc=await list('Compras Parceladas');
   if(!parc.length){sub.innerHTML='<p class="muted">Nenhuma compra parcelada. Cadastre em Lançar › Parcelado.</p>';return;}
   const hoje=today();
-  sub.innerHTML='<p class="muted" style="margin:0 4px 12px">As parcelas entram automaticamente na fatura do cartão no mês de cada vencimento.</p><div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">'+parc.map(p=>{
+  sub.innerHTML='<p class="muted" style="margin:0 4px 12px">As parcelas entram automaticamente na fatura do cartão no mês de cada vencimento.</p><div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">'+parc.map((p,pi)=>{
     const desc=p['Descrição']||'—',N=Math.max(1,parseInt(num(p['Nº de parcelas']))||1),total=num(p['Valor total']),d1=String(p['Data da 1ª parcela']||hoje).slice(0,10),vp=num(p['Valor da parcela'])||Math.round(total/N*100)/100;
     const atual=Math.min(N,Math.max(1,monthsBetween(d1,hoje)+1)),dia=d1.slice(8,10),pct=Math.round(atual/N*100);
     let linhas='';for(let k=1;k<=N;k++){const data=addMonthsISO(d1,k-1),eh=k===atual,passou=data<hoje;
       linhas+=`<div class="item" style="${eh?'border-color:var(--accent)':''}"><div>${k}${eh?' <span class="pill">ATUAL</span>':''} &nbsp;<small>${fmtBR(data)}</small></div><span class="val ${passou?'green':''}" style="font-size:15px">${BRL(vp)}</span></div>`;}
-    return `<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><b>${desc}</b><span class="pill">Parcela ${atual}/${N}</span></div>
+    return `<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><b>${desc}</b><div style="display:flex;align-items:center;gap:8px"><span class="pill">Parcela ${atual}/${N}</span><button class="delx" data-del="${pi}" title="Remover">🗑</button></div></div>
       <div class="bar" style="margin:10px 0"><i style="width:${pct}%"></i></div>
       <div class="row"><div><small class="muted">POR PARCELA</small><div class="val accent" style="font-size:18px">${BRL(vp)}</div></div><div><small class="muted">VENC.</small><div style="font-weight:700">dia ${dia}</div></div><div><small class="muted">TOTAL</small><div style="font-weight:700">${BRL(total)}</div></div></div>
       <details style="margin-top:10px"><summary class="muted" style="cursor:pointer">${N} parcelas</summary><div style="margin-top:8px">${linhas}</div></details>${p['Cartão']?`<div class="muted" style="font-size:12px;margin-top:8px">no cartão ${p['Cartão']}</div>`:''}</div>`;
   }).join('')+'</div>';
+  sub.querySelectorAll('button[data-del]').forEach(b=>b.onclick=async()=>{const p=parc[+b.dataset.del];if(!confirm('Remover a compra '+p['Descrição']+'?'))return;try{await delRow('Compras Parceladas',p.id);gParcelados(sub);}catch(e){alert(e.message);}});
 }
 let histF='todas';
 async function viewHist(){
@@ -337,7 +368,8 @@ async function viewHist(){
     const lanc=(await list('Lançamentos')).filter(F[histF]).sort((a,b)=>String(b['Data']).localeCompare(String(a['Data'])));
     const tot=lanc.reduce((s,r)=>s+(r['Tipo']==='Entrada'?1:-1)*num(r['Valor']),0);
     sub.innerHTML=`<div class="item" style="background:rgba(255,255,255,.02)"><div><b>${lanc.length} lançamentos</b></div><div class="val ${tot>=0?'green':'red'}">${BRL(tot)}</div></div>`+
-      (lanc.length?lanc.slice(0,200).map(r=>`<div class="item"><div>${r['Descrição']||'—'}<br><small>${fmtBR(r['Data'])} · ${r['Natureza']||''} ${r['Categoria']?'· '+r['Categoria']:''}</small></div><div class="val ${r['Tipo']==='Entrada'?'green':'red'}">${r['Tipo']==='Entrada'?'+':'−'} ${BRL(num(r['Valor']))}</div></div>`).join(''):'<p class="muted">Nada por aqui.</p>');
+      (lanc.length?lanc.slice(0,200).map(r=>`<div class="item"><div>${r['Descrição']||'—'}<br><small>${fmtBR(r['Data'])} · ${r['Natureza']||''} ${r['Categoria']?'· '+r['Categoria']:''}</small></div><div class="val ${r['Tipo']==='Entrada'?'green':'red'}">${r['Tipo']==='Entrada'?'+':'−'} ${BRL(num(r['Valor']))}</div><button class="delx" data-del="${r.id}" title="Remover">🗑</button></div>`).join(''):'<p class="muted">Nada por aqui.</p>');
+    sub.querySelectorAll('button[data-del]').forEach(b=>b.onclick=async()=>{if(!confirm('Remover lançamento?'))return;try{await delRow('Lançamentos',b.dataset.del);viewHist();}catch(e){alert(e.message);}});
   }catch(e){sub.innerHTML=`<p class="err">${e.message}</p>`;}
 }
 
@@ -389,9 +421,10 @@ async function viewConfig(){
   if(LS.url&&LS.key)loadCats();
   async function loadCats(){const box=document.getElementById('catbox');try{const cats=await list('Categorias');
     box.innerHTML=`<label>Nova categoria</label><input id="cn" placeholder="ex: Mercado"><label>Tipo</label><select id="ct"><option>Saída</option><option>Entrada</option></select><button id="cadd">Adicionar</button><div id="m3"></div>
-      <div style="margin-top:12px">${cats.length?cats.map(c=>`<div class="item"><div>${c['Nome']||'—'}</div><span class="pill">${c['Tipo']||''}</span></div>`).join(''):'<p class="muted">Nenhuma categoria.</p>'}</div>`;
+      <div style="margin-top:12px">${cats.length?cats.map(c=>`<div class="item"><div>${c['Nome']||'—'}</div><div style="display:flex;align-items:center;gap:8px"><span class="pill">${c['Tipo']||''}</span><button class="delx" data-del="${c.id}" title="Remover">🗑</button></div></div>`).join(''):'<p class="muted">Nenhuma categoria.</p>'}</div>`;
     document.getElementById('cadd').onclick=async()=>{const m=document.getElementById('m3'),n=val('cn');if(!n){m.innerHTML='<p class="err">Informe o nome.</p>';return;}
       try{m.textContent='Salvando…';await addRow('Categorias',{'Nome':n,'Tipo':val('ct')});loadCats();}catch(e){m.innerHTML=`<p class="err">${e.message}</p>`;}};
+    box.querySelectorAll('button[data-del]').forEach(b=>b.onclick=async()=>{if(!confirm('Remover categoria?'))return;try{await delRow('Categorias',b.dataset.del);loadCats();}catch(e){alert(e.message);}});
   }catch(e){box.innerHTML=`<p class="err">${e.message}</p>`;}}
 }
 syncNav();render();
