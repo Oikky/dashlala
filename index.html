@@ -139,17 +139,18 @@ function syncNav(){nav.querySelectorAll('button').forEach(b=>b.classList.toggle(
 function render(){document.getElementById('monthLabel').textContent=new Date().toLocaleDateString('pt-BR',{month:'long',year:'numeric'});destroyCharts();
   ({home:viewHome,add:viewLancar,gerir:viewGerir,hist:viewHist,timer:viewTimer,config:viewConfig}[current])();}
 
-let chartPeriod=6,chartFilter='all',LANC=[],PARC=[];
+let chartPeriod=6,chartFilter='all',LANC=[],PARC=[],REC=[];
 async function viewHome(){
   if(!cfg())return;
   app.innerHTML='<div class="skel"></div><div class="grid"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>';
   try{
-    const [lanc,contas,parc]=await Promise.all([list('Lançamentos'),list('Contas'),list('Compras Parceladas')]);LANC=lanc;PARC=parc;
+    const [lanc,contas,parc,recs]=await Promise.all([list('Lançamentos'),list('Contas'),list('Compras Parceladas'),list('Recorrências')]);LANC=lanc;PARC=parc;REC=recs;
     const sum=f=>lanc.filter(f).reduce((s,r)=>s+num(r['Valor']),0);
     const mes=r=>isThisMonth(r['Data']),conf=r=>(r['Status']||'')==='Confirmado',semCartao=r=>!(r['Cartão']&&String(r['Cartão']).trim());
     const mesK=ym(today());
-    const sV=sum(r=>mes(r)&&SERIES.sVar.f(r)),sF=sum(r=>mes(r)&&SERIES.sFix.f(r)),sP=parcelasCicloTotal(parc,mesK),sT=sV+sF+sP;
-    const eV=sum(r=>mes(r)&&SERIES.eVar.f(r)),eF=sum(r=>mes(r)&&SERIES.eFix.f(r)),eTot=sum(r=>mes(r)&&r['Tipo']==='Entrada'),saldoMes=eTot-sT;
+    const recAtv=recs.filter(r=>r['Ativo']!==false&&String(r['Ativo'])!=='false'),recE=recAtv.filter(r=>r['Tipo']==='Entrada').reduce((s,r)=>s+num(r['Valor']),0),recS=recAtv.filter(r=>r['Tipo']==='Saída').reduce((s,r)=>s+num(r['Valor']),0);
+    const sV=sum(r=>mes(r)&&SERIES.sVar.f(r)),sF=recS,sP=parcelasCicloTotal(parc,mesK),sT=sV+sF+sP;
+    const eV=sum(r=>mes(r)&&SERIES.eVar.f(r)),eF=recE,eTot=eV+eF,saldoMes=eTot-sT;
     const acum=sum(r=>r['Tipo']==='Entrada'&&conf(r))-sum(r=>r['Tipo']==='Saída'&&conf(r)&&semCartao(r));
     const atual=contas.reduce((s,c)=>s+num(c['Saldo inicial']),0)+acum;
     const C=(l,v,cls,fkey)=>`<div class="card clk ${chartFilter===fkey?'on':''}" data-f="${fkey}"><div class="lbl">${l}</div><div class="val ${cls||''} cv" data-v="${v}">${BRL(0)}</div></div>`;
@@ -172,8 +173,8 @@ async function viewHome(){
 function drawMainChart(){
   destroyCharts();const ctx=document.getElementById('mainChart');if(!ctx||typeof Chart==='undefined')return;
   Chart.defaults.color='#8a93ab';
-  const K=chartPeriod,now=new Date(),months=[];
-  for(let i=K-1;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);months.push({k:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`,lb:d.toLocaleDateString('pt-BR',{month:'short',year:'2-digit'})});}
+  const K=chartPeriod,now=new Date(),past=Math.floor(K/2),months=[];
+  for(let i=-past;i<K-past;i++){const d=new Date(now.getFullYear(),now.getMonth()+i,1);months.push({k:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`,lb:d.toLocaleDateString('pt-BR',{month:'short',year:'2-digit'})});}
   const inM=(r,k)=>ym(r['Data'])===k;
   if(chartFilter==='acum'){
     let run=0;const data=months.map(m=>{const e=LANC.filter(r=>inM(r,m.k)&&r['Tipo']==='Entrada'&&(r['Status']||'')==='Confirmado').reduce((s,r)=>s+num(r['Valor']),0);
@@ -182,7 +183,9 @@ function drawMainChart(){
     return;
   }
   const keys=chartFilter==='all'?Object.keys(SERIES):[chartFilter];
-  const datasets=keys.map(key=>({label:SERIES[key].label,backgroundColor:SERIES[key].color,borderRadius:6,data:months.map(m=>key==='sPar'?Math.round(parcelasCicloTotal(PARC,m.k)*100)/100:Math.round(LANC.filter(r=>inM(r,m.k)&&SERIES[key].f(r)).reduce((s,r)=>s+num(r['Valor']),0)*100)/100)}));
+  const ra=REC.filter(r=>r['Ativo']!==false&&String(r['Ativo'])!=='false'),rE=ra.filter(r=>r['Tipo']==='Entrada').reduce((s,r)=>s+num(r['Valor']),0),rS=ra.filter(r=>r['Tipo']==='Saída').reduce((s,r)=>s+num(r['Valor']),0);
+  const sval=(key,k)=>key==='sPar'?parcelasCicloTotal(PARC,k):key==='sFix'?rS:key==='eFix'?rE:LANC.filter(r=>inM(r,k)&&SERIES[key].f(r)).reduce((s,r)=>s+num(r['Valor']),0);
+  const datasets=keys.map(key=>({label:SERIES[key].label,backgroundColor:SERIES[key].color,borderRadius:6,data:months.map(m=>Math.round(sval(key,m.k)*100)/100)}));
   charts.push(new Chart(ctx,{type:'bar',data:{labels:months.map(m=>m.lb),datasets},options:{plugins:{legend:{display:keys.length>1,position:'bottom',labels:{boxWidth:12,padding:10}}},scales:{y:{grid:{color:'rgba(255,255,255,.06)'}},x:{grid:{display:false}}}}}));
 }
 function openModal(inner){const mo=document.getElementById('modal');mo.innerHTML=`<div class="modal"><div class="panel">${inner}</div></div>`;const m=mo.firstElementChild;m.onclick=e=>{if(e.target===m)closeModal();};}
