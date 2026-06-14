@@ -139,7 +139,7 @@ function syncNav(){nav.querySelectorAll('button').forEach(b=>b.classList.toggle(
 function render(){document.getElementById('monthLabel').textContent=new Date().toLocaleDateString('pt-BR',{month:'long',year:'numeric'});destroyCharts();
   ({home:viewHome,add:viewLancar,gerir:viewGerir,hist:viewHist,timer:viewTimer,config:viewConfig}[current])();}
 
-let chartPeriod=6,chartFilter='all',LANC=[],PARC=[],REC=[];
+let chartPeriod=6,chartFilter='all',chartOffset=0,LANC=[],PARC=[],REC=[];
 async function viewHome(){
   if(!cfg())return;
   app.innerHTML='<div class="skel"></div><div class="grid"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>';
@@ -162,10 +162,13 @@ async function viewHome(){
       <h2>Entradas do mês</h2>
       <div class="grid">${C('Variadas',eV,'green','eVar')}${C('Ganhos fixos',eF,'green','eFix')}<div class="card clk ${chartFilter==='acum'?'on':''}" data-f="acum"><div class="lbl">Saldo acumulado</div><div class="val ${acum>=0?'green':'red'} cv" data-v="${acum}">${BRL(0)}</div></div></div>
       <h2>Gráfico</h2>
-      <div class="panel"><div class="ph"><div id="segp"></div><button class="ghost sm" id="geral">Ver tudo</button></div><canvas id="mainChart" height="120"></canvas></div>`;
+      <div class="panel"><div class="ph"><div id="segp"></div><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><button class="sm ghost" id="navp">‹</button><span class="muted" id="rangelbl" style="min-width:140px;text-align:center;font-size:12px"></span><button class="sm ghost" id="navn">›</button><button class="sm ghost" id="hoje">hoje</button><button class="ghost sm" id="geral">Ver tudo</button></div></div><canvas id="mainChart" height="110"></canvas></div>`;
     animateCounts();
     document.getElementById('segp').appendChild(seg([['3',' 3M'],['6','6M'],['12','12M'],['24','24M']],String(chartPeriod),v=>{chartPeriod=+v;drawMainChart();},true));
     document.getElementById('geral').onclick=()=>{chartFilter='all';document.querySelectorAll('.clk').forEach(c=>c.classList.remove('on'));drawMainChart();};
+    document.getElementById('navp').onclick=()=>{chartOffset-=Math.max(1,Math.floor(chartPeriod/2));drawMainChart();};
+    document.getElementById('navn').onclick=()=>{chartOffset+=Math.max(1,Math.floor(chartPeriod/2));drawMainChart();};
+    document.getElementById('hoje').onclick=()=>{chartOffset=0;drawMainChart();};
     app.querySelectorAll('.clk').forEach(c=>c.onclick=()=>{chartFilter=c.dataset.f;app.querySelectorAll('.clk').forEach(x=>x.classList.toggle('on',x===c));drawMainChart();});
     drawMainChart();
   }catch(e){app.innerHTML=`<p class="err">${e.message}</p>`;}
@@ -174,7 +177,8 @@ function drawMainChart(){
   destroyCharts();const ctx=document.getElementById('mainChart');if(!ctx||typeof Chart==='undefined')return;
   Chart.defaults.color='#8a93ab';
   const K=chartPeriod,now=new Date(),past=Math.floor(K/2),months=[];
-  for(let i=-past;i<K-past;i++){const d=new Date(now.getFullYear(),now.getMonth()+i,1);months.push({k:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`,lb:d.toLocaleDateString('pt-BR',{month:'short',year:'2-digit'})});}
+  for(let i=-past;i<K-past;i++){const d=new Date(now.getFullYear(),now.getMonth()+i+chartOffset,1);months.push({k:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`,lb:d.toLocaleDateString('pt-BR',{month:'short',year:'2-digit'})});}
+  const rl=document.getElementById('rangelbl');if(rl)rl.textContent=months[0].lb+' — '+months[months.length-1].lb;
   const inM=(r,k)=>ym(r['Data'])===k;
   if(chartFilter==='acum'){
     let run=0;const data=months.map(m=>{const e=LANC.filter(r=>inM(r,m.k)&&r['Tipo']==='Entrada'&&(r['Status']||'')==='Confirmado').reduce((s,r)=>s+num(r['Valor']),0);
