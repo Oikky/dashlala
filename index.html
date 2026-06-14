@@ -97,6 +97,7 @@ const addRow=(name,f)=>api('POST',`/tables/${encodeURIComponent(name)}/rows`,{ro
 const delRow=(name,id)=>api('DELETE',`/tables/${encodeURIComponent(name)}/rows/${encodeURIComponent(id)}`);
 const CCOL=['linear-gradient(135deg,#7c6cff,#5b8cff)','linear-gradient(135deg,#fb7185,#f59e0b)','linear-gradient(135deg,#34d399,#22d3ee)','linear-gradient(135deg,#a78bfa,#f472b6)','linear-gradient(135deg,#22d3ee,#3b82f6)'];
 function formaPg(){const el=document.getElementById('forma'),v=el?el.value:'';return {'Conta':v.indexOf('conta::')===0?v.slice(7):'','Cartão':v.indexOf('cartao::')===0?v.slice(8):''};}
+function clearRange(){const a=document.getElementById('rde'),b=document.getElementById('rate');if(a)a.value='';if(b)b.value='';}
 function num(v){if(typeof v==='number')return v;if(!v)return 0;const n=parseFloat(String(v).replace(/[^\d.,-]/g,'').replace(/\.(?=\d{3})/g,'').replace(',','.'));return isNaN(n)?0:n;}
 function isThisMonth(d){if(!d)return false;const dt=new Date(d),n=new Date();return dt.getFullYear()===n.getFullYear()&&dt.getMonth()===n.getMonth();}
 function today(){return new Date().toISOString().slice(0,10);}
@@ -162,13 +163,14 @@ async function viewHome(){
       <h2>Entradas do mês</h2>
       <div class="grid">${C('Variadas',eV,'green','eVar')}${C('Ganhos fixos',eF,'green','eFix')}<div class="card clk ${chartFilter==='acum'?'on':''}" data-f="acum"><div class="lbl">Saldo acumulado</div><div class="val ${acum>=0?'green':'red'} cv" data-v="${acum}">${BRL(0)}</div></div></div>
       <h2>Gráfico</h2>
-      <div class="panel"><div class="ph"><div id="segp"></div><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><button class="sm ghost" id="navp">‹</button><span class="muted" id="rangelbl" style="min-width:140px;text-align:center;font-size:12px"></span><button class="sm ghost" id="navn">›</button><button class="sm ghost" id="hoje">hoje</button><button class="ghost sm" id="geral">Ver tudo</button></div></div><canvas id="mainChart" height="110"></canvas></div>`;
+      <div class="panel"><div class="ph"><div id="segp"></div><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><button class="sm ghost" id="navp">‹</button><span class="muted" id="rangelbl" style="min-width:140px;text-align:center;font-size:12px"></span><button class="sm ghost" id="navn">›</button><button class="sm ghost" id="hoje">hoje</button><button class="ghost sm" id="geral">Ver tudo</button></div></div><div class="ph" style="margin-top:2px"><div class="muted" style="display:flex;align-items:center;gap:6px;font-size:12px">De <input type="month" id="rde" style="width:auto;margin:0;padding:6px 8px"> até <input type="month" id="rate" style="width:auto;margin:0;padding:6px 8px"></div></div><canvas id="mainChart" height="110"></canvas></div>`;
     animateCounts();
-    document.getElementById('segp').appendChild(seg([['3',' 3M'],['6','6M'],['12','12M'],['24','24M']],String(chartPeriod),v=>{chartPeriod=+v;drawMainChart();},true));
+    document.getElementById('segp').appendChild(seg([['3',' 3M'],['6','6M'],['12','12M'],['24','24M']],String(chartPeriod),v=>{chartPeriod=+v;clearRange();drawMainChart();},true));
     document.getElementById('geral').onclick=()=>{chartFilter='all';document.querySelectorAll('.clk').forEach(c=>c.classList.remove('on'));drawMainChart();};
-    document.getElementById('navp').onclick=()=>{chartOffset-=Math.max(1,Math.floor(chartPeriod/2));drawMainChart();};
-    document.getElementById('navn').onclick=()=>{chartOffset+=Math.max(1,Math.floor(chartPeriod/2));drawMainChart();};
-    document.getElementById('hoje').onclick=()=>{chartOffset=0;drawMainChart();};
+    document.getElementById('navp').onclick=()=>{clearRange();chartOffset-=Math.max(1,Math.floor(chartPeriod/2));drawMainChart();};
+    document.getElementById('navn').onclick=()=>{clearRange();chartOffset+=Math.max(1,Math.floor(chartPeriod/2));drawMainChart();};
+    document.getElementById('hoje').onclick=()=>{clearRange();chartOffset=0;drawMainChart();};
+    const rde=document.getElementById('rde'),rate=document.getElementById('rate');if(rde)rde.onchange=()=>drawMainChart();if(rate)rate.onchange=()=>drawMainChart();
     app.querySelectorAll('.clk').forEach(c=>c.onclick=()=>{chartFilter=c.dataset.f;app.querySelectorAll('.clk').forEach(x=>x.classList.toggle('on',x===c));drawMainChart();});
     drawMainChart();
   }catch(e){app.innerHTML=`<p class="err">${e.message}</p>`;}
@@ -176,8 +178,10 @@ async function viewHome(){
 function drawMainChart(){
   destroyCharts();const ctx=document.getElementById('mainChart');if(!ctx||typeof Chart==='undefined')return;
   Chart.defaults.color='#8a93ab';
-  const K=chartPeriod,now=new Date(),past=Math.floor(K/2),months=[];
-  for(let i=-past;i<K-past;i++){const d=new Date(now.getFullYear(),now.getMonth()+i+chartOffset,1);months.push({k:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`,lb:d.toLocaleDateString('pt-BR',{month:'short',year:'2-digit'})});}
+  const K=chartPeriod,now=new Date(),months=[];
+  const de=(document.getElementById('rde')||{}).value,ate=(document.getElementById('rate')||{}).value;
+  if(de&&ate&&de<=ate){let y=+de.split('-')[0],m=+de.split('-')[1];for(let g=0;g<120;g++){const k=`${y}-${String(m).padStart(2,'0')}`;months.push({k,lb:new Date(y,m-1,1).toLocaleDateString('pt-BR',{month:'short',year:'2-digit'})});if(k===ate)break;m++;if(m>12){m=1;y++;}}}
+  else{const past=Math.floor(K/2);for(let i=-past;i<K-past;i++){const d=new Date(now.getFullYear(),now.getMonth()+i+chartOffset,1);months.push({k:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`,lb:d.toLocaleDateString('pt-BR',{month:'short',year:'2-digit'})});}}
   const rl=document.getElementById('rangelbl');if(rl)rl.textContent=months[0].lb+' — '+months[months.length-1].lb;
   const inM=(r,k)=>ym(r['Data'])===k;
   if(chartFilter==='acum'){
