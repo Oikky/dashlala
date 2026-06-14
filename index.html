@@ -102,6 +102,11 @@ function seg(items,active,pick,mini){const d=document.createElement('div');d.cla
 function val(id){return document.getElementById(id).value;}
 function closeModal(){document.getElementById('modal').innerHTML='';}
 function animateCounts(){document.querySelectorAll('.cv').forEach(el=>{const t=parseFloat(el.dataset.v||'0'),t0=performance.now();(function s(n){const k=Math.min(1,(n-t0)/650),e=1-Math.pow(1-k,3);el.textContent=BRL(t*e);if(k<1)requestAnimationFrame(s);})(t0);});}
+function faturaCiclo(dateISO,closing){const d=new Date(String(dateISO).slice(0,10)+'T00:00:00');let y=d.getFullYear(),m=d.getMonth();if(d.getDate()>(closing||31)){m++;if(m>11){m=0;y++;}}return `${y}-${String(m+1).padStart(2,'0')}`;}
+function cicloLabel(x){const a=String(x).split('-');return new Date(+a[0],+a[1]-1,1).toLocaleDateString('pt-BR',{month:'short',year:'2-digit'});}
+function parcelasNoCiclo(parc,nome,ciclo){return (parc||[]).filter(p=>(p['Cartão']||'')===nome).reduce((s,p)=>{const N=Math.max(1,parseInt(num(p['Nº de parcelas']))||1),d1=String(p['Data da 1ª parcela']||today()).slice(0,10),vp=num(p['Valor da parcela'])||Math.round(num(p['Valor total'])/N*100)/100;let t=0;for(let k=0;k<N;k++)if(ym(addMonthsISO(d1,k))===ciclo)t+=vp;return s+t;},0);}
+function parcelasCicloTotal(parc,ciclo){return (parc||[]).reduce((s,p)=>{const N=Math.max(1,parseInt(num(p['Nº de parcelas']))||1),d1=String(p['Data da 1ª parcela']||today()).slice(0,10),vp=num(p['Valor da parcela'])||Math.round(num(p['Valor total'])/N*100)/100;let t=0;for(let k=0;k<N;k++)if(ym(addMonthsISO(d1,k))===ciclo)t+=vp;return s+t;},0);}
+function faturaTotal(lanc,parc,nome,closing,ciclo){let t=parcelasNoCiclo(parc,nome,ciclo);(lanc||[]).filter(l=>(l['Cartão']||'')===nome&&l['Tipo']==='Saída'&&(l['Origem']||'')!=='Fatura'&&faturaCiclo(l['Data'],closing)===ciclo).forEach(l=>t+=num(l['Valor']));return Math.round(t*100)/100;}
 const SERIES={
   sVar:{label:'Saídas Var.',color:'#fb7185',f:r=>r['Tipo']==='Saída'&&r['Natureza']==='Variada'},
   sFix:{label:'Saídas Fixas',color:'#fbbf24',f:r=>r['Tipo']==='Saída'&&r['Natureza']==='Fixa'},
@@ -125,17 +130,18 @@ function syncNav(){nav.querySelectorAll('button').forEach(b=>b.classList.toggle(
 function render(){document.getElementById('monthLabel').textContent=new Date().toLocaleDateString('pt-BR',{month:'long',year:'numeric'});destroyCharts();
   ({home:viewHome,add:viewLancar,gerir:viewGerir,hist:viewHist,timer:viewTimer,config:viewConfig}[current])();}
 
-let chartPeriod=6,chartFilter='all',LANC=[];
+let chartPeriod=6,chartFilter='all',LANC=[],PARC=[];
 async function viewHome(){
   if(!cfg())return;
   app.innerHTML='<div class="skel"></div><div class="grid"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>';
   try{
-    const [lanc,contas]=await Promise.all([list('Lançamentos'),list('Contas')]);LANC=lanc;
+    const [lanc,contas,parc]=await Promise.all([list('Lançamentos'),list('Contas'),list('Compras Parceladas')]);LANC=lanc;PARC=parc;
     const sum=f=>lanc.filter(f).reduce((s,r)=>s+num(r['Valor']),0);
-    const mes=r=>isThisMonth(r['Data']),conf=r=>(r['Status']||'')==='Confirmado';
-    const sV=sum(r=>mes(r)&&SERIES.sVar.f(r)),sF=sum(r=>mes(r)&&SERIES.sFix.f(r)),sP=sum(r=>mes(r)&&SERIES.sPar.f(r)),sT=sV+sF+sP;
+    const mes=r=>isThisMonth(r['Data']),conf=r=>(r['Status']||'')==='Confirmado',semCartao=r=>!(r['Cartão']&&String(r['Cartão']).trim());
+    const mesK=ym(today());
+    const sV=sum(r=>mes(r)&&SERIES.sVar.f(r)),sF=sum(r=>mes(r)&&SERIES.sFix.f(r)),sP=parcelasCicloTotal(parc,mesK),sT=sV+sF+sP;
     const eV=sum(r=>mes(r)&&SERIES.eVar.f(r)),eF=sum(r=>mes(r)&&SERIES.eFix.f(r)),eTot=sum(r=>mes(r)&&r['Tipo']==='Entrada'),saldoMes=eTot-sT;
-    const acum=sum(r=>r['Tipo']==='Entrada'&&conf(r))-sum(r=>r['Tipo']==='Saída'&&conf(r));
+    const acum=sum(r=>r['Tipo']==='Entrada'&&conf(r))-sum(r=>r['Tipo']==='Saída'&&conf(r)&&semCartao(r));
     const atual=contas.reduce((s,c)=>s+num(c['Saldo inicial']),0)+acum;
     const C=(l,v,cls,fkey)=>`<div class="card clk ${chartFilter===fkey?'on':''}" data-f="${fkey}"><div class="lbl">${l}</div><div class="val ${cls||''} cv" data-v="${v}">${BRL(0)}</div></div>`;
     app.innerHTML=`
@@ -162,12 +168,12 @@ function drawMainChart(){
   const inM=(r,k)=>ym(r['Data'])===k;
   if(chartFilter==='acum'){
     let run=0;const data=months.map(m=>{const e=LANC.filter(r=>inM(r,m.k)&&r['Tipo']==='Entrada'&&(r['Status']||'')==='Confirmado').reduce((s,r)=>s+num(r['Valor']),0);
-      const s=LANC.filter(r=>inM(r,m.k)&&r['Tipo']==='Saída'&&(r['Status']||'')==='Confirmado').reduce((a,r)=>a+num(r['Valor']),0);run+=e-s;return Math.round(run*100)/100;});
+      const s=LANC.filter(r=>inM(r,m.k)&&r['Tipo']==='Saída'&&(r['Status']||'')==='Confirmado'&&!(r['Cartão']&&String(r['Cartão']).trim())).reduce((a,r)=>a+num(r['Valor']),0);run+=e-s;return Math.round(run*100)/100;});
     charts.push(new Chart(ctx,{type:'line',data:{labels:months.map(m=>m.lb),datasets:[{label:'Saldo acumulado',data,borderColor:'#7c6cff',backgroundColor:'rgba(124,108,255,.15)',fill:true,tension:.3,pointRadius:3}]},options:{plugins:{legend:{display:false}},scales:{y:{grid:{color:'rgba(255,255,255,.06)'}},x:{grid:{display:false}}}}}));
     return;
   }
   const keys=chartFilter==='all'?Object.keys(SERIES):[chartFilter];
-  const datasets=keys.map(key=>({label:SERIES[key].label,backgroundColor:SERIES[key].color,borderRadius:6,data:months.map(m=>Math.round(LANC.filter(r=>inM(r,m.k)&&SERIES[key].f(r)).reduce((s,r)=>s+num(r['Valor']),0)*100)/100)}));
+  const datasets=keys.map(key=>({label:SERIES[key].label,backgroundColor:SERIES[key].color,borderRadius:6,data:months.map(m=>key==='sPar'?Math.round(parcelasCicloTotal(PARC,m.k)*100)/100:Math.round(LANC.filter(r=>inM(r,m.k)&&SERIES[key].f(r)).reduce((s,r)=>s+num(r['Valor']),0)*100)/100)}));
   charts.push(new Chart(ctx,{type:'bar',data:{labels:months.map(m=>m.lb),datasets},options:{plugins:{legend:{display:keys.length>1,position:'bottom',labels:{boxWidth:12,padding:10}}},scales:{y:{grid:{color:'rgba(255,255,255,.06)'}},x:{grid:{display:false}}}}}));
 }
 function openModal(inner){const mo=document.getElementById('modal');mo.innerHTML=`<div class="modal"><div class="panel">${inner}</div></div>`;const m=mo.firstElementChild;m.onclick=e=>{if(e.target===m)closeModal();};}
@@ -243,18 +249,18 @@ async function viewGerir(){
   try{if(subG==='cartoes')await gCartoes(sub);else if(subG==='fixos')await gFixos(sub);else await gParcelados(sub);}catch(e){sub.innerHTML=`<p class="err">${e.message}</p>`;}
 }
 async function gCartoes(sub){
-  const [carts,lanc,parc]=await Promise.all([list('Cartões'),list('Lançamentos'),list('Compras Parceladas')]);
-  const mesK=ym(today());
-  const usado=nome=>lanc.filter(l=>l['Cartão']===nome&&l['Tipo']==='Saída'&&ym(l['Data'])===mesK).reduce((s,l)=>s+num(l['Valor']),0);
+  const [carts,lanc,parc,faturas]=await Promise.all([list('Cartões'),list('Lançamentos'),list('Compras Parceladas'),list('Faturas')]);
+  const paga=(nome,ciclo)=>faturas.some(f=>(f['Cartão']||'')===nome&&(f['Ciclo']||'')===ciclo&&(f['Status']||'')==='Paga');
   sub.innerHTML=`<div class="ph"><b>Seus cartões</b><button class="sm" id="add">+ Adicionar cartão</button></div>
-    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))">${
-    carts.length?carts.map((c,i)=>{const lim=num(c['Limite']),u=usado(c['Nome']),pct=lim?Math.min(100,Math.round(u/lim*100)):0;
-      return `<div class="card clk" data-i="${i}"><div style="display:flex;justify-content:space-between;align-items:center"><b>${c['Nome']||'—'}</b><span class="pill">venc dia ${c['Dia de vencimento']||'?'}</span></div>
-      <div class="muted" style="margin-top:8px;font-size:12px">Usado este mês</div><div style="font-weight:800">${BRL(u)} <span class="muted" style="font-weight:400">/ ${BRL(lim)}</span></div>
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr))">${
+    carts.length?carts.map((c,i)=>{const lim=num(c['Limite']),clo=parseInt(num(c['Dia de fechamento']))||31,ciclo=faturaCiclo(today(),clo),tot=faturaTotal(lanc,parc,c['Nome'],clo,ciclo),pct=lim?Math.min(100,Math.round(tot/lim*100)):0,pg=paga(c['Nome'],ciclo);
+      return `<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><b>${c['Nome']||'—'}</b><span class="pill">venc dia ${c['Dia de vencimento']||'?'}</span></div>
+      <div class="muted" style="margin-top:8px;font-size:12px">Fatura ${cicloLabel(ciclo)} ${pg?'· paga':''}</div><div class="${pg?'green':''}" style="font-weight:800;font-size:18px">${BRL(tot)} <span class="muted" style="font-weight:400;font-size:13px">/ ${BRL(lim)}</span></div>
       <div class="bar"><i class="${pct>80?'hot':''}" style="width:${pct}%"></i></div>
-      <div class="muted" style="margin-top:8px;font-size:12px">fecha dia ${c['Dia de fechamento']||'?'} · toque p/ faturas previstas</div></div>`}).join(''):'<p class="muted">Nenhum cartão. Toque em Adicionar.</p>'}</div>`;
+      <div style="display:flex;gap:8px;margin-top:12px">${pg?'<span class="pill">fatura paga</span>':`<button class="sm green" data-pay="${i}">Pagar fatura</button>`}<button class="sm ghost" data-i="${i}">Ver faturas</button></div></div>`}).join(''):'<p class="muted">Nenhum cartão. Toque em Adicionar.</p>'}</div>`;
   sub.querySelector('#add').onclick=()=>modalCartao();
-  sub.querySelectorAll('.clk').forEach(el=>el.onclick=()=>modalFaturas(carts[+el.dataset.i],lanc,parc));
+  sub.querySelectorAll('button[data-i]').forEach(el=>el.onclick=()=>modalFaturas(carts[+el.dataset.i],lanc,parc,faturas));
+  sub.querySelectorAll('button[data-pay]').forEach(el=>el.onclick=()=>{const c=carts[+el.dataset.pay],clo=parseInt(num(c['Dia de fechamento']))||31;modalPagarFatura(c,faturaCiclo(today(),clo),lanc,parc);});
 }
 function modalCartao(){
   openModal(`<div class="ph"><b>Novo cartão</b><button class="ghost sm" onclick="closeModal()">Fechar</button></div>
@@ -264,14 +270,30 @@ function modalCartao(){
   document.getElementById('sv').onclick=async()=>{const m=document.getElementById('msg');const nome=val('nome');if(!nome){m.innerHTML='<p class="err">Informe o nome.</p>';return;}
     try{m.textContent='Salvando…';await addRow('Cartões',{'Nome':nome,'Limite':parseFloat(val('lim')||'0'),'Dia de fechamento':parseInt(val('fec')||'0'),'Dia de vencimento':parseInt(val('ven')||'0')});closeModal();render();}catch(e){m.innerHTML=`<p class="err">${e.message}</p>`;}};
 }
-function modalFaturas(c,lanc,parc){
-  const now=new Date(),linhas=[];
-  for(let i=0;i<6;i++){const d=new Date(now.getFullYear(),now.getMonth()+i,1),k=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-    let tot=lanc.filter(l=>l['Cartão']===c['Nome']&&l['Tipo']==='Saída'&&ym(l['Data'])===k).reduce((s,l)=>s+num(l['Valor']),0);
-    parc.filter(p=>p['Cartão']===c['Nome']).forEach(p=>{const N=Math.max(1,parseInt(num(p['Nº de parcelas']))||1),d1=String(p['Data da 1ª parcela']||today()).slice(0,10),vp=num(p['Valor da parcela'])||Math.round(num(p['Valor total'])/N*100)/100;
-      for(let kk=0;kk<N;kk++){if(ym(addMonthsISO(d1,kk))===k)tot+=vp;}});
-    linhas.push(`<div class="item"><div>${d.toLocaleDateString('pt-BR',{month:'long',year:'2-digit'})}</div><div class="val accent" style="font-size:16px">${BRL(tot)}</div></div>`);}
-  openModal(`<div class="ph"><b>${c['Nome']} — faturas previstas</b><button class="ghost sm" onclick="closeModal()">Fechar</button></div>${linhas.join('')}<p class="muted" style="font-size:12px">Estimativa: gastos lançados no cartão + parcelas previstas por mês.</p>`);
+function modalFaturas(c,lanc,parc,faturas){
+  const clo=parseInt(num(c['Dia de fechamento']))||31,now=new Date(),linhas=[];
+  for(let i=-2;i<6;i++){const d=new Date(now.getFullYear(),now.getMonth()+i,1),ciclo=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    const tot=faturaTotal(lanc,parc,c['Nome'],clo,ciclo);if(tot<=0)continue;
+    const pg=faturas.some(f=>(f['Cartão']||'')===c['Nome']&&(f['Ciclo']||'')===ciclo&&(f['Status']||'')==='Paga'),futura=i>0;
+    linhas.push(`<div class="item"><div>${cicloLabel(ciclo)}<br><small>${pg?'paga':(futura?'prevista':'em aberto')}</small></div><div style="display:flex;align-items:center;gap:10px"><span class="val ${pg?'green':'accent'}" style="font-size:16px">${BRL(tot)}</span>${pg?'<span class="pill">paga</span>':(futura?'':`<button class="sm green" data-c="${ciclo}">Pagar</button>`)}</div></div>`);}
+  openModal(`<div class="ph"><b>${c['Nome']} — faturas</b><button class="ghost sm" onclick="closeModal()">Fechar</button></div>${linhas.join('')||'<p class="muted">Sem faturas.</p>'}<p class="muted" style="font-size:12px">Inclui gastos no cartão + parcelas do ciclo.</p>`);
+  document.querySelectorAll('button[data-c]').forEach(b=>b.onclick=()=>{closeModal();modalPagarFatura(c,b.dataset.c,lanc,parc);});
+}
+function modalPagarFatura(c,ciclo,lanc,parc){
+  const cloDef=parseInt(num(c['Dia de fechamento']))||31,venDef=parseInt(num(c['Dia de vencimento']))||10;
+  const calc=()=>faturaTotal(lanc,parc,c['Nome'],parseInt(val('mclo'))||cloDef,ciclo);
+  openModal(`<div class="ph"><b>Pagar fatura ${cicloLabel(ciclo)}</b><button class="ghost sm" onclick="closeModal()">Fechar</button></div>
+    <div class="row"><div><label>Dia de fechamento</label><input id="mclo" type="number" min="1" max="31" value="${cloDef}"></div><div><label>Dia de vencimento</label><input id="mven" type="number" min="1" max="31" value="${venDef}"></div></div>
+    <div class="card" style="margin-top:12px;text-align:center"><div class="muted">Total da fatura</div><div class="val accent" id="mtot" style="font-size:26px">${BRL(calc())}</div></div>
+    <button class="green" id="mpay">Confirmar pagamento</button><div id="mm"></div>`);
+  document.getElementById('mclo').oninput=()=>{document.getElementById('mtot').textContent=BRL(calc());};
+  document.getElementById('mpay').onclick=async()=>{const m=document.getElementById('mm'),total=calc(),ven=parseInt(val('mven'))||venDef,clo=parseInt(val('mclo'))||cloDef;
+    if(total<=0){m.innerHTML='<p class="err">Fatura zerada.</p>';return;}
+    const a=ciclo.split('-'),y=a[0],mo=a[1],dd=String(Math.min(ven,28)).padStart(2,'0'),dataVenc=`${y}-${mo}-${dd}`;
+    try{m.textContent='Pagando…';
+      await addRow('Faturas',{'Cartão':c['Nome'],'Ciclo':ciclo,'Data de fechamento':`${y}-${mo}-${String(Math.min(clo,28)).padStart(2,'0')}`,'Data de vencimento':dataVenc,'Status':'Paga','Valor':total});
+      await addRow('Lançamentos',{'Data':dataVenc,'Descrição':`Fatura ${c['Nome']} ${cicloLabel(ciclo)}`,'Valor':total,'Tipo':'Saída','Natureza':'Fatura','Status':'Confirmado','Origem':'Fatura'});
+      closeModal();render();}catch(e){m.innerHTML=`<p class="err">${e.message}</p>`;}};
 }
 async function gFixos(sub){
   const [recs,lanc]=await Promise.all([list('Recorrências'),list('Lançamentos')]);
@@ -290,28 +312,19 @@ async function gFixos(sub){
     openModal(`<div class="ph"><b>${r['Nome']} — últimos pagamentos</b><button class="ghost sm" onclick="closeModal()">Fechar</button></div>${hist.length?hist.map(l=>`<div class="item"><div>${fmtBR(l['Data'])}</div><div class="val ${r['Tipo']==='Entrada'?'green':'red'}" style="font-size:15px">${BRL(num(l['Valor']))}</div></div>`).join(''):'<p class="muted">Nenhum pagamento registrado ainda.</p>'}`);});
 }
 async function gParcelados(sub){
-  const [parc,lanc]=await Promise.all([list('Compras Parceladas'),list('Lançamentos')]);
+  const parc=await list('Compras Parceladas');
   if(!parc.length){sub.innerHTML='<p class="muted">Nenhuma compra parcelada. Cadastre em Lançar › Parcelado.</p>';return;}
-  const pagos=new Set(lanc.filter(l=>(l['Origem']||'')==='Parcela').map(l=>l['Descrição']));const hoje=today();
-  sub.innerHTML='<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">'+parc.map((p,pi)=>{
-    const desc=p['Descrição']||'—',N=Math.max(1,parseInt(num(p['Nº de parcelas']))||1),total=num(p['Valor total']);
-    const d1=String(p['Data da 1ª parcela']||hoje).slice(0,10),vp=num(p['Valor da parcela'])||Math.round(total/N*100)/100;
-    let firstUnpaid=0;for(let k=1;k<=N;k++){if(!pagos.has(`${k}ª Parcela da compra ${desc}`)){firstUnpaid=k;break;}}
-    const pagasN=N-(firstUnpaid?N-firstUnpaid+1:0),atual=firstUnpaid||N,pct=Math.round((firstUnpaid?firstUnpaid-1:N)/N*100),dia=d1.slice(8,10);
-    let linhas='';
-    for(let k=1;k<=N;k++){const data=addMonthsISO(d1,k-1),nome=`${k}ª Parcela da compra ${desc}`,pg=pagos.has(nome),eh=k===atual&&!pg;
-      linhas+=`<div class="item" style="${eh?'border-color:var(--accent)':''}"><div>${k}${eh?' <span class="pill">ATUAL</span>':''} &nbsp;<small>${fmtBR(data)}</small></div>
-        <div style="display:flex;align-items:center;gap:10px"><span class="val ${pg?'green':''}" style="font-size:15px">${BRL(vp)}</span>
-        ${pg?'<span class="pill">pago</span>':`<button class="sm green" data-p="${pi}" data-k="${k}">Pagar</button>`}</div></div>`;}
+  const hoje=today();
+  sub.innerHTML='<p class="muted" style="margin:0 4px 12px">As parcelas entram automaticamente na fatura do cartão no mês de cada vencimento.</p><div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">'+parc.map(p=>{
+    const desc=p['Descrição']||'—',N=Math.max(1,parseInt(num(p['Nº de parcelas']))||1),total=num(p['Valor total']),d1=String(p['Data da 1ª parcela']||hoje).slice(0,10),vp=num(p['Valor da parcela'])||Math.round(total/N*100)/100;
+    const atual=Math.min(N,Math.max(1,monthsBetween(d1,hoje)+1)),dia=d1.slice(8,10),pct=Math.round(atual/N*100);
+    let linhas='';for(let k=1;k<=N;k++){const data=addMonthsISO(d1,k-1),eh=k===atual,passou=data<hoje;
+      linhas+=`<div class="item" style="${eh?'border-color:var(--accent)':''}"><div>${k}${eh?' <span class="pill">ATUAL</span>':''} &nbsp;<small>${fmtBR(data)}</small></div><span class="val ${passou?'green':''}" style="font-size:15px">${BRL(vp)}</span></div>`;}
     return `<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><b>${desc}</b><span class="pill">Parcela ${atual}/${N}</span></div>
       <div class="bar" style="margin:10px 0"><i style="width:${pct}%"></i></div>
-      <div class="row"><div><small class="muted">POR PARCELA</small><div class="val accent" style="font-size:18px">${BRL(vp)}</div></div>
-      <div><small class="muted">VENCIMENTO</small><div style="font-weight:700">dia ${dia}</div></div><div><small class="muted">TOTAL</small><div style="font-weight:700">${BRL(total)}</div></div></div>
-      <details style="margin-top:10px"><summary class="muted" style="cursor:pointer">${N} parcelas — toque para ver todas</summary><div style="margin-top:8px">${linhas}</div></details></div>`;
+      <div class="row"><div><small class="muted">POR PARCELA</small><div class="val accent" style="font-size:18px">${BRL(vp)}</div></div><div><small class="muted">VENC.</small><div style="font-weight:700">dia ${dia}</div></div><div><small class="muted">TOTAL</small><div style="font-weight:700">${BRL(total)}</div></div></div>
+      <details style="margin-top:10px"><summary class="muted" style="cursor:pointer">${N} parcelas</summary><div style="margin-top:8px">${linhas}</div></details>${p['Cartão']?`<div class="muted" style="font-size:12px;margin-top:8px">no cartão ${p['Cartão']}</div>`:''}</div>`;
   }).join('')+'</div>';
-  sub.querySelectorAll('button[data-p]').forEach(b=>b.onclick=async()=>{const p=parc[+b.dataset.p],k=+b.dataset.k;b.textContent='…';
-    const N=Math.max(1,parseInt(num(p['Nº de parcelas']))||1),total=num(p['Valor total']),d1=String(p['Data da 1ª parcela']||hoje).slice(0,10),vp=num(p['Valor da parcela'])||Math.round(total/N*100)/100,data=addMonthsISO(d1,k-1);
-    try{await addRow('Lançamentos',{'Data':data,'Descrição':`${k}ª Parcela da compra ${p['Descrição']}`,'Valor':vp,'Tipo':'Saída','Natureza':'Parcelada','Categoria':p['Categoria']||'','Cartão':p['Cartão']||'','Status':'Confirmado','Origem':'Parcela'});await gParcelados(sub);}catch(e){b.textContent='erro';}});
 }
 let histF='todas';
 async function viewHist(){
