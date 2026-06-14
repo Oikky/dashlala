@@ -98,6 +98,7 @@ const delRow=(name,id)=>api('DELETE',`/tables/${encodeURIComponent(name)}/rows/$
 const CCOL=['linear-gradient(135deg,#7c6cff,#5b8cff)','linear-gradient(135deg,#fb7185,#f59e0b)','linear-gradient(135deg,#34d399,#22d3ee)','linear-gradient(135deg,#a78bfa,#f472b6)','linear-gradient(135deg,#22d3ee,#3b82f6)'];
 function formaPg(){const el=document.getElementById('forma'),v=el?el.value:'';return {'Conta':v.indexOf('conta::')===0?v.slice(7):'','Cartão':v.indexOf('cartao::')===0?v.slice(8):''};}
 function clearRange(){const a=document.getElementById('rde'),b=document.getElementById('rate');if(a)a.value='';if(b)b.value='';}
+function recTotalMes(recs,tipo,k){return (recs||[]).filter(r=>r['Tipo']===tipo&&r['Ativo']!==false&&String(r['Ativo'])!=='false'&&(!r.createdAt||ym(r.createdAt)<=k)).reduce((s,r)=>s+num(r['Valor']),0);}
 function num(v){if(typeof v==='number')return v;if(!v)return 0;const n=parseFloat(String(v).replace(/[^\d.,-]/g,'').replace(/\.(?=\d{3})/g,'').replace(',','.'));return isNaN(n)?0:n;}
 function isThisMonth(d){if(!d)return false;const dt=new Date(d),n=new Date();return dt.getFullYear()===n.getFullYear()&&dt.getMonth()===n.getMonth();}
 function today(){return new Date().toISOString().slice(0,10);}
@@ -149,7 +150,7 @@ async function viewHome(){
     const sum=f=>lanc.filter(f).reduce((s,r)=>s+num(r['Valor']),0);
     const mes=r=>isThisMonth(r['Data']),conf=r=>(r['Status']||'')==='Confirmado',semCartao=r=>!(r['Cartão']&&String(r['Cartão']).trim());
     const mesK=ym(today());
-    const recAtv=recs.filter(r=>r['Ativo']!==false&&String(r['Ativo'])!=='false'),recE=recAtv.filter(r=>r['Tipo']==='Entrada').reduce((s,r)=>s+num(r['Valor']),0),recS=recAtv.filter(r=>r['Tipo']==='Saída').reduce((s,r)=>s+num(r['Valor']),0);
+    const recE=recTotalMes(recs,'Entrada',mesK),recS=recTotalMes(recs,'Saída',mesK);
     const sV=sum(r=>mes(r)&&SERIES.sVar.f(r)),sF=recS,sP=parcelasCicloTotal(parc,mesK),sT=sV+sF+sP;
     const eV=sum(r=>mes(r)&&SERIES.eVar.f(r)),eF=recE,eTot=eV+eF,saldoMes=eTot-sT;
     const acum=sum(r=>r['Tipo']==='Entrada'&&conf(r))-sum(r=>r['Tipo']==='Saída'&&conf(r)&&semCartao(r));
@@ -191,8 +192,7 @@ function drawMainChart(){
     return;
   }
   const keys=chartFilter==='all'?Object.keys(SERIES):[chartFilter];
-  const ra=REC.filter(r=>r['Ativo']!==false&&String(r['Ativo'])!=='false'),rE=ra.filter(r=>r['Tipo']==='Entrada').reduce((s,r)=>s+num(r['Valor']),0),rS=ra.filter(r=>r['Tipo']==='Saída').reduce((s,r)=>s+num(r['Valor']),0);
-  const sval=(key,k)=>key==='sPar'?parcelasCicloTotal(PARC,k):key==='sFix'?rS:key==='eFix'?rE:LANC.filter(r=>inM(r,k)&&SERIES[key].f(r)).reduce((s,r)=>s+num(r['Valor']),0);
+  const sval=(key,k)=>key==='sPar'?parcelasCicloTotal(PARC,k):key==='sFix'?recTotalMes(REC,'Saída',k):key==='eFix'?recTotalMes(REC,'Entrada',k):LANC.filter(r=>inM(r,k)&&SERIES[key].f(r)).reduce((s,r)=>s+num(r['Valor']),0);
   const curK=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   const datasets=keys.map(key=>({label:SERIES[key].label,backgroundColor:months.map(m=>SERIES[key].color+(m.k>curK?'4d':'')),borderRadius:6,data:months.map(m=>Math.round(sval(key,m.k)*100)/100)}));
   charts.push(new Chart(ctx,{type:'bar',data:{labels:months.map(m=>m.lb),datasets},options:{plugins:{legend:{display:keys.length>1,position:'bottom',labels:{boxWidth:12,padding:10}}},scales:{y:{grid:{color:'rgba(255,255,255,.06)'}},x:{grid:{display:false}}}}}));
