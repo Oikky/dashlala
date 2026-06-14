@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dash Lala</title>
+<style>
+  :root{
+    --bg:#0f1115; --card:#171a21; --card2:#1e222b; --line:#2a2f3a;
+    --txt:#e8eaed; --muted:#9aa3b2; --accent:#3d7dff; --green:#37b26b; --red:#e5575c;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;padding-bottom:72px}
+  header{padding:16px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+  header h1{font-size:18px;margin:0}
+  .wrap{max-width:760px;margin:0 auto;padding:16px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .card .lbl{color:var(--muted);font-size:12px}
+  .card .val{font-size:20px;font-weight:700;margin-top:4px}
+  .val.green{color:var(--green)} .val.red{color:var(--red)}
+  h2{font-size:15px;color:var(--muted);margin:22px 0 10px;font-weight:600}
+  input,select,button,textarea{font:inherit}
+  input,select,textarea{width:100%;background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:10px;margin-top:6px}
+  label{display:block;font-size:13px;color:var(--muted);margin-top:10px}
+  button{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:12px;font-weight:600;cursor:pointer;margin-top:14px;width:100%}
+  button.ghost{background:transparent;border:1px solid var(--line);color:var(--txt)}
+  button.red{background:var(--red)} button.green{background:var(--green)}
+  .row{display:flex;gap:10px}
+  .row>*{flex:1}
+  .item{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:8px;display:flex;justify-content:space-between;gap:10px}
+  .item small{color:var(--muted)}
+  nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--line);display:flex}
+  nav button{flex:1;background:none;border:none;color:var(--muted);border-radius:0;margin:0;padding:10px 4px;font-size:11px;font-weight:500}
+  nav button.active{color:var(--accent)}
+  nav button .ic{display:block;font-size:18px;margin-bottom:2px}
+  .timer{font-size:40px;font-weight:800;text-align:center;letter-spacing:2px;margin:18px 0}
+  .hidden{display:none}
+  .muted{color:var(--muted);font-size:13px}
+  .pill{font-size:11px;padding:2px 8px;border-radius:99px;background:var(--card2);color:var(--muted)}
+  .err{color:var(--red);font-size:13px;margin-top:8px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Dash Lala</h1>
+  <span id="monthLabel" class="pill"></span>
+</header>
+<div class="wrap" id="app"></div>
+
+<nav>
+  <button data-tab="home" class="active"><span class="ic">📊</span>Início</button>
+  <button data-tab="add"><span class="ic">➕</span>Lançar</button>
+  <button data-tab="lists"><span class="ic">📁</span>Listas</button>
+  <button data-tab="timer"><span class="ic">⏱️</span>Tempo</button>
+  <button data-tab="config"><span class="ic">⚙️</span>Config</button>
+</nav>
+
+<script>
+const LS = {
+  get url(){return localStorage.getItem('dl_url')||''},
+  set url(v){localStorage.setItem('dl_url',v)},
+  get key(){return localStorage.getItem('dl_key')||''},
+  set key(v){localStorage.setItem('dl_key',v)},
+  get vh(){return parseFloat(localStorage.getItem('dl_vh')||'0')||0},
+  set vh(v){localStorage.setItem('dl_vh',v)},
+  get t0(){return localStorage.getItem('dl_t0')||''},
+  set t0(v){v?localStorage.setItem('dl_t0',v):localStorage.removeItem('dl_t0')},
+};
+const BRL = n => (n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const app = document.getElementById('app');
+const T = ['Lançamentos','Contas','Cartões','Recorrências','Compras Parceladas','Faturas','Metas','Sessões de Trabalho'];
+
+async function api(method, path, body){
+  if(!LS.url || !LS.key) throw new Error('Configure a URL do Worker e a chave em Config.');
+  const r = await fetch(LS.url.replace(/\/$/,'') + path, {
+    method,
+    headers:{'X-App-Key':LS.key, 'Content-Type':'application/json'},
+    body: body?JSON.stringify(body):undefined
+  });
+  const data = await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(data.error || ('Erro '+r.status));
+  return data;
+}
+const list = name => api('GET', `/tables/${encodeURIComponent(name)}/rows`).then(d=>d.rows||[]);
+const addRow = (name, fields) => api('POST', `/tables/${encodeURIComponent(name)}/rows`, {rows:[fields]});
+
+function num(v){ if(typeof v==='number') return v; if(!v) return 0; const n=parseFloat(String(v).replace(/[^\d.,-]/g,'').replace('.','').replace(',','.')); return isNaN(n)?0:n; }
+function isThisMonth(d){ if(!d) return false; const dt=new Date(d); const n=new Date(); return dt.getFullYear()===n.getFullYear() && dt.getMonth()===n.getMonth(); }
+function today(){ return new Date().toISOString().slice(0,10); }
+
+// ---------- NAV ----------
+let current='home';
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
+  current=b.dataset.tab;
+  document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('active',x===b));
+  render();
+});
+function render(){
+  const now=new Date();
+  document.getElementById('monthLabel').textContent=now.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+  if(current==='home') return viewHome();
+  if(current==='add') return viewAdd();
+  if(current==='lists') return viewLists();
+  if(current==='timer') return viewTimer();
+  if(current==='config') return viewConfig();
+}
+
+// ---------- HOME (esquema geral) ----------
+async function viewHome(){
+  if(!LS.url||!LS.key){ app.innerHTML='<p class="muted">Bem-vindo! Vá em <b>Config</b> e informe a URL do Worker e a sua chave de acesso para começar.</p>'; return; }
+  app.innerHTML='<p class="muted">Carregando…</p>';
+  try{
+    const [lanc, contas] = await Promise.all([list('Lançamentos'), list('Contas')]);
+    const sum = f => lanc.filter(f).reduce((s,r)=>s+num(r['Valor']),0);
+    const mes = r => isThisMonth(r['Data']);
+    const conf = r => (r['Status']||'')==='Confirmado';
+    const saidaVar = sum(r=>mes(r)&&r['Tipo']==='Saída'&&r['Natureza']==='Variada');
+    const saidaFix = sum(r=>mes(r)&&r['Tipo']==='Saída'&&r['Natureza']==='Fixa');
+    const saidaPar = sum(r=>mes(r)&&r['Tipo']==='Saída'&&r['Natureza']==='Parcelada');
+    const saidaTot = saidaVar+saidaFix+saidaPar;
+    const entVar = sum(r=>mes(r)&&r['Tipo']==='Entrada'&&r['Natureza']==='Variada');
+    const entFix = sum(r=>mes(r)&&r['Tipo']==='Entrada'&&r['Natureza']==='Fixa');
+    const entTot = entVar+entFix + sum(r=>mes(r)&&r['Tipo']==='Entrada'&&r['Natureza']!=='Variada'&&r['Natureza']!=='Fixa');
+    const saldoMes = entTot - saidaTot;
+    const entAll = sum(r=>r['Tipo']==='Entrada'&&conf(r));
+    const saiAll = sum(r=>r['Tipo']==='Saída'&&conf(r));
+    const acumulado = entAll - saiAll;
+    const saldoInicial = contas.reduce((s,c)=>s+num(c['Saldo inicial']),0);
+    const atual = saldoInicial + acumulado;
+    const C=(l,v,cls='')=>`<div class="card"><div class="lbl">${l}</div><div class="val ${cls}">${BRL(v)}</div></div>`;
+    app.innerHTML=`
+      <h2>Saídas do mês</h2>
+      <div class="grid">${C('Variadas',saidaVar)}${C('Fixas',saidaFix)}${C('Parceladas',saidaPar)}${C('Total saídas',saidaTot,'red')}</div>
+      <h2>Entradas do mês</h2>
+      <div class="grid">${C('Variadas',entVar)}${C('Fixas',entFix)}${C('Total entradas',entTot,'green')}${C('Saldo do mês',saldoMes,saldoMes>=0?'green':'red')}</div>
+      <h2>Saldos</h2>
+      <div class="grid">${C('Saldo acumulado',acumulado,acumulado>=0?'green':'red')}${C('Saldo atual',atual,atual>=0?'green':'red')}</div>`;
+  }catch(e){ app.innerHTML=`<p class="err">${e.message}</p>`; }
+}
+
+// ---------- ADD (lançar) ----------
+async function viewAdd(){
+  if(!LS.url||!LS.key){ app.innerHTML='<p class="muted">Configure primeiro em Config.</p>'; return; }
+  app.innerHTML=`
+    <h2>Novo lançamento</h2>
+    <div class="row">
+      <div><label>Tipo</label><select id="f_tipo"><option>Saída</option><option>Entrada</option></select></div>
+      <div><label>Natureza</label><select id="f_nat"><option>Variada</option><option>Fixa</option><option>Parcelada</option></select></div>
+    </div>
+    <label>Valor (R$)</label><input id="f_valor" type="number" step="0.01" inputmode="decimal" placeholder="0,00">
+    <label>Descrição</label><input id="f_desc" placeholder="ex: mercado">
+    <label>Data</label><input id="f_data" type="date" value="${today()}">
+    <div class="row">
+      <div><label>Categoria</label><input id="f_cat" placeholder="opcional"></div>
+      <div><label>Conta / Cartão</label><input id="f_conta" placeholder="ex: Nubank"></div>
+    </div>
+    <label>Status</label><select id="f_status"><option>Confirmado</option><option>Previsto</option></select>
+    <button id="save">Salvar lançamento</button>
+    <div id="msg"></div>`;
+  document.getElementById('save').onclick=async()=>{
+    const msg=document.getElementById('msg');
+    const fields={
+      'Data':document.getElementById('f_data').value,
+      'Descrição':document.getElementById('f_desc').value,
+      'Valor':parseFloat(document.getElementById('f_valor').value||'0'),
+      'Tipo':document.getElementById('f_tipo').value,
+      'Natureza':document.getElementById('f_nat').value,
+      'Categoria':document.getElementById('f_cat').value,
+      'Conta':document.getElementById('f_conta').value,
+      'Status':document.getElementById('f_status').value,
+      'Origem':'Manual'
+    };
+    if(!fields.Valor){ msg.innerHTML='<p class="err">Informe um valor.</p>'; return; }
+    try{ msg.textContent='Salvando…'; await addRow('Lançamentos',fields); msg.innerHTML='<p class="muted">✅ Salvo!</p>';
+      document.getElementById('f_valor').value=''; document.getElementById('f_desc').value='';
+    }catch(e){ msg.innerHTML=`<p class="err">${e.message}</p>`; }
+  };
+}
+
+// ---------- LISTS ----------
+async function viewLists(){
+  if(!LS.url||!LS.key){ app.innerHTML='<p class="muted">Configure primeiro em Config.</p>'; return; }
+  app.innerHTML='<p class="muted">Carregando…</p>';
+  try{
+    const [lanc,cart,parc,rec,metas]=await Promise.all([
+      list('Lançamentos'),list('Cartões'),list('Compras Parceladas'),list('Recorrências'),list('Metas')]);
+    const recent=lanc.slice(-8).reverse();
+    const itens = (arr,fn)=>arr.length?arr.map(fn).join(''):'<p class="muted">Vazio.</p>';
+    app.innerHTML=`
+      <h2>Lançamentos recentes</h2>
+      ${itens(recent,r=>`<div class="item"><div>${r['Descrição']||'—'}<br><small>${r['Data']||''} · ${r['Tipo']} · ${r['Natureza']||''}</small></div><div class="val ${r['Tipo']==='Entrada'?'green':'red'}">${BRL(num(r['Valor']))}</div></div>`)}
+      <h2>Cartões</h2>
+      ${itens(cart,r=>`<div class="item"><div>${r['Nome']||'—'}<br><small>fecha dia ${r['Dia de fechamento']||'?'} · vence dia ${r['Dia de vencimento']||'?'}</small></div><div class="val">${BRL(num(r['Limite']))}</div></div>`)}
+      <h2>Compras parceladas</h2>
+      ${itens(parc,r=>`<div class="item"><div>${r['Descrição']||'—'}<br><small>${r['Nº de parcelas']||'?'}x · ${r['Cartão']||''}</small></div><div class="val">${BRL(num(r['Valor total']))}</div></div>`)}
+      <h2>Fixos (recorrências)</h2>
+      ${itens(rec,r=>`<div class="item"><div>${r['Nome']||'—'}<br><small>dia ${r['Dia do mês']||'?'} · ${r['Tipo']||''}</small></div><div class="val ${r['Tipo']==='Entrada'?'green':'red'}">${BRL(num(r['Valor']))}</div></div>`)}
+      <h2>Metas</h2>
+      ${itens(metas,r=>{const a=num(r['Alvo']),p=num(r['Progresso atual']);const pct=a?Math.min(100,Math.round(p/a*100)):0;return `<div class="item"><div>${r['Nome']||'—'}<br><small>${p} / ${a} ${r['Unidade']||''} · ${pct}%</small></div><div class="pill">${r['Status']||''}</div></div>`})}
+    `;
+  }catch(e){ app.innerHTML=`<p class="err">${e.message}</p>`; }
+}
+
+// ---------- TIMER ----------
+let tickInt=null;
+function viewTimer(){
+  if(!LS.url||!LS.key){ app.innerHTML='<p class="muted">Configure primeiro em Config.</p>'; return; }
+  const running=!!LS.t0;
+  app.innerHTML=`
+    <h2>Cronômetro de trabalho</h2>
+    <p class="muted">Valor/hora atual: <b>${BRL(LS.vh)}</b> (mude em Config)</p>
+    <div class="timer" id="clock">00:00:00</div>
+    ${running
+      ? '<button class="red" id="stop">Parar e lançar ganho</button>'
+      : '<button class="green" id="start">Iniciar</button>'}
+    <div id="msg"></div>`;
+  const clock=document.getElementById('clock');
+  function upd(){ if(!LS.t0){clock.textContent='00:00:00';return;} const s=Math.floor((Date.now()-Number(LS.t0))/1000);
+    const h=String(Math.floor(s/3600)).padStart(2,'0'),m=String(Math.floor(s%3600/60)).padStart(2,'0'),x=String(s%60).padStart(2,'0');
+    clock.textContent=`${h}:${m}:${x}`; }
+  clearInterval(tickInt); upd();
+  if(running) tickInt=setInterval(upd,1000);
+  const startBtn=document.getElementById('start');
+  if(startBtn) startBtn.onclick=()=>{ LS.t0=String(Date.now()); viewTimer(); };
+  const stopBtn=document.getElementById('stop');
+  if(stopBtn) stopBtn.onclick=async()=>{
+    const msg=document.getElementById('msg'); const ini=new Date(Number(LS.t0)); const fim=new Date();
+    const horas=(fim-ini)/3600000; const valor=+(horas*LS.vh).toFixed(2);
+    try{
+      msg.textContent='Salvando sessão…';
+      await addRow('Sessões de Trabalho',{'Início':ini.toISOString(),'Fim':fim.toISOString(),'Valor/hora':LS.vh});
+      if(valor>0) await addRow('Lançamentos',{'Data':today(),'Descrição':'Trabalho ('+horas.toFixed(2)+'h)','Valor':valor,'Tipo':'Entrada','Natureza':'Variada','Status':'Confirmado','Origem':'Cronômetro'});
+      LS.t0=''; clearInterval(tickInt);
+      msg.innerHTML=`<p class="muted">✅ Sessão de ${horas.toFixed(2)}h salva${valor>0?' · ganho '+BRL(valor):''}.</p>`;
+      setTimeout(viewTimer,1500);
+    }catch(e){ msg.innerHTML=`<p class="err">${e.message}</p>`; }
+  };
+}
+
+// ---------- CONFIG ----------
+function viewConfig(){
+  app.innerHTML=`
+    <h2>Configuração</h2>
+    <label>URL do Worker</label><input id="c_url" value="${LS.url}" placeholder="https://...workers.dev">
+    <label>Chave de acesso (APP_KEY)</label><input id="c_key" type="password" value="${LS.key}" placeholder="sua senha">
+    <label>Valor por hora (R$)</label><input id="c_vh" type="number" step="0.01" value="${LS.vh||''}" placeholder="ex: 50">
+    <button id="csave">Salvar</button>
+    <button class="ghost" id="ctest">Testar conexão</button>
+    <div id="msg"></div>
+    <p class="muted" style="margin-top:18px">Esses dados ficam guardados só neste aparelho.</p>`;
+  document.getElementById('csave').onclick=()=>{
+    LS.url=document.getElementById('c_url').value.trim();
+    LS.key=document.getElementById('c_key').value.trim();
+    LS.vh=parseFloat(document.getElementById('c_vh').value||'0')||0;
+    document.getElementById('msg').innerHTML='<p class="muted">✅ Salvo.</p>';
+  };
+  document.getElementById('ctest').onclick=async()=>{
+    const msg=document.getElementById('msg'); LS.url=document.getElementById('c_url').value.trim(); LS.key=document.getElementById('c_key').value.trim();
+    try{ msg.textContent='Testando…'; const r=await list('Contas'); msg.innerHTML=`<p class="muted">✅ Conectado! ${r.length} conta(s) encontradas.</p>`; }
+    catch(e){ msg.innerHTML=`<p class="err">${e.message}</p>`; }
+  };
+}
+
+render();
+</script>
+</body>
+</html>
