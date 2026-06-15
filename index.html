@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Dash Lala</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%237c6cff'/><stop offset='1' stop-color='%2322d3ee'/></linearGradient></defs><rect width='64' height='64' rx='16' fill='url(%23g)'/><text x='32' y='45' font-family='Arial,Segoe UI,sans-serif' font-size='38' font-weight='bold' fill='white' text-anchor='middle'>D</text></svg>">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <style>
   :root{--bg:#0a0d14;--bg2:#0f1320;--card:rgba(255,255,255,.045);--cardLine:rgba(255,255,255,.09);
@@ -421,7 +422,7 @@ function viewTimer(){
       localStorage.removeItem(K.a);localStorage.removeItem(K.s);localStorage.removeItem(K.c);m.innerHTML=`<p class="ok">✅ ${horas}h · ${BRL(valor)}</p>`;paint();loadSes();}catch(e){m.innerHTML=`<p class="err">${e.message}</p>`;}}
   async function loadSes(){const el=document.getElementById('ses');try{const ses=(await list('Sessões de Trabalho')).slice(-10).reverse();
     el.innerHTML=ses.length?ses.map(s=>`<div class="item"><div>${fmtBR(s['Início'])}<br><small>${num(s['Duração (h)']).toFixed(2)}h</small></div><div class="val green">${BRL(num(s['Duração (h)'])*num(s['Valor/hora']))}</div></div>`).join(''):'<p class="muted">Nenhuma sessão ainda.</p>';}catch(e){el.innerHTML=`<p class="err">${e.message}</p>`;}}
-  const dl=document.getElementById('dlw');if(dl)dl.onclick=()=>{['cronometro.ahk','instalar-cronometro.bat'].forEach((f,i)=>setTimeout(()=>{const a=document.createElement('a');a.href=ghUrl+'/raw/main/'+f;a.download=f;document.body.appendChild(a);a.click();a.remove();},i*700));};
+  const dl=document.getElementById('dlw');if(dl)dl.onclick=async()=>{const base='https://raw.githubusercontent.com/Oikky/dashlala/main/';for(const f of ['cronometro.ahk','instalar-cronometro.bat']){try{const r=await fetch(base+f);const b=await r.blob();const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=f;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(u);}catch(e){alert('Falha ao baixar '+f);}}};
   paint();upd();clearInterval(tick);tick=setInterval(upd,1000);loadSes();
 }
 
