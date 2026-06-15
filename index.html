@@ -99,7 +99,8 @@ const list=name=>api('GET',`/tables/${encodeURIComponent(name)}/rows`).then(d=>d
 const addRow=(name,f)=>api('POST',`/tables/${encodeURIComponent(name)}/rows`,{rows:[f]});
 const delRow=(name,id)=>api('DELETE',`/tables/${encodeURIComponent(name)}/rows/${encodeURIComponent(id)}`);
 const CCOL=['linear-gradient(135deg,#7c6cff,#5b8cff)','linear-gradient(135deg,#fb7185,#f59e0b)','linear-gradient(135deg,#34d399,#22d3ee)','linear-gradient(135deg,#a78bfa,#f472b6)','linear-gradient(135deg,#22d3ee,#3b82f6)'];
-function formaPg(){const el=document.getElementById('forma'),v=el?el.value:'';return {'Conta':v.indexOf('conta::')===0?v.slice(7):'','Cartão':v.indexOf('cartao::')===0?v.slice(8):''};}
+function formaPg(){const f=document.getElementById('forma'),al=document.getElementById('formaalvo'),v=f?f.value:'',alvo=al?al.value:'';return {'Conta':v==='conta'?alvo:'','Cartão':v==='cartao'?alvo:''};}
+function wireForma(sel,contas,carts){const alvo=document.getElementById('formaalvo');if(!alvo)return;sel.onchange=()=>{const v=sel.value,arr=v==='conta'?contas:v==='cartao'?carts:[];alvo.innerHTML='<option value="">'+(arr.length?'— selecione —':'(cadastre em Gerir)')+'</option>'+arr.map(x=>`<option>${x['Nome']}</option>`).join('');};}
 function clearRange(){const a=document.getElementById('rde'),b=document.getElementById('rate');if(a)a.value='';if(b)b.value='';}
 function recTotalMes(recs,tipo,k){return (recs||[]).filter(r=>r['Tipo']===tipo&&r['Ativo']!==false&&String(r['Ativo'])!=='false'&&(!r.createdAt||ym(r.createdAt)<=k)).reduce((s,r)=>s+num(r['Valor']),0);}
 function num(v){if(typeof v==='number')return v;if(!v)return 0;const n=parseFloat(String(v).replace(/[^\d.,-]/g,'').replace(/\.(?=\d{3})/g,'').replace(',','.'));return isNaN(n)?0:n;}
@@ -112,7 +113,7 @@ function monthsBetween(a,b){const x=new Date(a+'T00:00:00'),y=new Date(b+'T00:00
 function cfg(){if(!LS.token){showLogin();return false;}return true;}
 function destroyCharts(){charts.forEach(c=>{try{c.destroy()}catch(e){}});charts=[];}
 function selOpts(arr,field,sel){return '<option value=""></option>'+arr.map(r=>{const v=(r[field]||'').toString();return `<option ${v===sel?'selected':''}>${v}</option>`}).join('');}
-function seg(items,active,pick,mini){const d=document.createElement('div');d.className='seg'+(mini?' mini':'');items.forEach(([id,lb])=>{const b=document.createElement('button');b.textContent=lb;if(id===active)b.className='on';b.onclick=()=>pick(id);d.appendChild(b);});return d;}
+function seg(items,active,pick,mini){const d=document.createElement('div');d.className='seg'+(mini?' mini':'');items.forEach(([id,lb])=>{const b=document.createElement('button');b.textContent=lb;if(id===active)b.className='on';b.onclick=()=>{d.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');pick(id);};d.appendChild(b);});return d;}
 function val(id){return document.getElementById(id).value;}
 function closeModal(){document.getElementById('modal').innerHTML='';}
 function animateCounts(){document.querySelectorAll('.cv').forEach(el=>{const t=parseFloat(el.dataset.v||'0'),t0=performance.now();(function s(n){const k=Math.min(1,(n-t0)/650),e=1-Math.pow(1-k,3);el.textContent=BRL(t*e);if(k<1)requestAnimationFrame(s);})(t0);});}
@@ -223,6 +224,7 @@ async function viewLancar(){
   try{[cats,carts,contas]=await Promise.all([list('Categorias'),list('Cartões'),list('Contas')]);}catch(e){sub.innerHTML=`<p class="err">${e.message}</p>`;return;}
   if(subL==='avulso')fAvulso(sub,cats,carts,contas);else if(subL==='parcelado')fParcelado(sub,cats,carts);else fFixo(sub,cats,carts,contas);
   const cs=document.getElementById('cat');if(cs)wireCatAdd(cs);
+  const fs=document.getElementById('forma');if(fs)wireForma(fs,contas,carts);
 }
 function fAvulso(sub,cats,carts,contas){
   sub.innerHTML=`<div class="panel">
@@ -231,7 +233,7 @@ function fAvulso(sub,cats,carts,contas){
     <label>Valor (R$)</label><input id="valor" type="number" step="0.01" inputmode="decimal">
     <label>Descrição</label><input id="desc"><label>Data</label><input id="data" type="date" value="${today()}">
     <label>Categoria</label><select id="cat">${selOpts(cats,'Nome')}<option value="__add__">➕ Adicionar categoria…</option></select>
-    <label>Forma de pagamento</label><select id="forma"><option value="">— selecione —</option><optgroup label="À vista / débito">${contas.map(a=>`<option value="conta::${a['Nome']}">${a['Nome']}</option>`).join('')}</optgroup><optgroup label="Crédito (cartão)">${carts.map(cc=>`<option value="cartao::${cc['Nome']}">${cc['Nome']}</option>`).join('')}</optgroup></select>
+    <label>Forma de pagamento</label><div class="row"><select id="forma"><option value="">— selecione —</option><option value="conta">À vista / débito</option><option value="cartao">Crédito (cartão)</option></select><select id="formaalvo"><option value="">—</option></select></div>
     <label>Status</label><select id="status"><option>Confirmado</option><option>Previsto</option></select>
     <button id="save">Salvar lançamento</button><div id="msg"></div></div>`;
   sub.querySelector('#save').onclick=async()=>{const m=sub.querySelector('#msg');
@@ -257,7 +259,7 @@ function fFixo(sub,cats,carts,contas){
     <label>Nome</label><input id="nome" placeholder="ex: Aluguel">
     <div class="row"><div><label>Tipo</label><select id="tipo"><option>Saída</option><option>Entrada</option></select></div><div><label>Valor (R$)</label><input id="valor" type="number" step="0.01"></div></div>
     <label>Dia do mês</label><input id="dia" type="number" min="1" max="31" value="10"><label>Categoria</label><select id="cat">${selOpts(cats,'Nome')}<option value="__add__">➕ Adicionar categoria…</option></select>
-    <label>Forma de pagamento</label><select id="forma"><option value="">— selecione —</option><optgroup label="À vista / débito">${contas.map(a=>`<option value="conta::${a['Nome']}">${a['Nome']}</option>`).join('')}</optgroup><optgroup label="Crédito (cartão)">${carts.map(cc=>`<option value="cartao::${cc['Nome']}">${cc['Nome']}</option>`).join('')}</optgroup></select>
+    <label>Forma de pagamento</label><div class="row"><select id="forma"><option value="">— selecione —</option><option value="conta">À vista / débito</option><option value="cartao">Crédito (cartão)</option></select><select id="formaalvo"><option value="">—</option></select></div>
     <button id="save">Cadastrar fixo</button><div id="msg"></div></div>`;
   sub.querySelector('#save').onclick=async()=>{const m=sub.querySelector('#msg');
     const f={'Nome':val('nome'),'Valor':parseFloat(val('valor')||'0'),'Tipo':val('tipo'),'Dia do mês':parseInt(val('dia')||'1'),'Categoria':val('cat'),...formaPg(),'Ativo':true};
