@@ -74,7 +74,7 @@
 </style>
 </head>
 <body>
-<header><div class="brand"><span class="dot"></span>Dash Lala</div><span class="month" id="monthLabel"></span></header>
+<header><div class="brand"><span class="dot"></span><span id="brandtxt">Dash Lala</span></div><span class="month" id="monthLabel"></span></header>
 <div class="wrap" id="app"></div>
 <div id="modal"></div>
 <nav id="nav"></nav>
@@ -82,6 +82,7 @@
 const DEFAULT_URL='https://dash-lala-api.ikkysousa5.workers.dev';
 const LS={get url(){return localStorage.getItem('dl_url')||DEFAULT_URL},set url(v){localStorage.setItem('dl_url',v)},
   get token(){return localStorage.getItem('dl_token')||''},set token(v){v?localStorage.setItem('dl_token',v):localStorage.removeItem('dl_token')},
+  get user(){return localStorage.getItem('dl_user')||''},set user(v){v?localStorage.setItem('dl_user',v):localStorage.removeItem('dl_user')},
   get vh(){return parseFloat(localStorage.getItem('dl_vh')||'0')||0},set vh(v){localStorage.setItem('dl_vh',v)}};
 const BRL=n=>(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const app=document.getElementById('app');
@@ -140,7 +141,8 @@ const nav=document.getElementById('nav');
 nav.innerHTML=TABS.map(x=>`<button data-tab="${x.id}"><svg viewBox="0 0 24 24"><path d="${x.i}"/></svg>${x.t}</button>`).join('');
 nav.querySelectorAll('button').forEach(b=>b.onclick=()=>{current=b.dataset.tab;syncNav();render();});
 function syncNav(){nav.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.tab===current));}
-function render(){document.getElementById('monthLabel').textContent=new Date().toLocaleDateString('pt-BR',{month:'long',year:'numeric'});destroyCharts();
+function setBrand(){const el=document.getElementById('brandtxt');if(!el)return;const u=(LS.user||'').trim().split(/\s+/)[0];el.textContent=u?('Dash '+u.charAt(0).toUpperCase()+u.slice(1)):'Dash Lala';}
+function render(){setBrand();document.getElementById('monthLabel').textContent=new Date().toLocaleDateString('pt-BR',{month:'long',year:'numeric'});destroyCharts();
   ({home:viewHome,add:viewLancar,gerir:viewGerir,hist:viewHist,timer:viewTimer,config:viewConfig}[current])();}
 
 let chartPeriod=6,chartFilter='all',chartOffset=0,LANC=[],PARC=[],REC=[];
@@ -423,6 +425,7 @@ function viewTimer(){
 
 function showLogin(){
   const nav=document.getElementById('nav');if(nav)nav.style.display='none';
+  const bt=document.getElementById('brandtxt');if(bt)bt.textContent='Dash Lala';
   const ml=document.getElementById('monthLabel');if(ml)ml.textContent='';
   app.innerHTML=`<div style="max-width:390px;margin:7vh auto 0"><div class="hero" style="text-align:center"><div class="lbl">Bem-vindo</div><div class="v" style="font-size:30px">Dash Lala</div></div>
     <div class="panel" style="margin-top:16px"><label>Usuário</label><input id="lu" autocomplete="username"><label>Senha</label><input id="lp" type="password" autocomplete="current-password">
@@ -432,7 +435,7 @@ function showLogin(){
       <label>Chave de admin</label><input id="ak" type="password"><label>Novo usuário</label><input id="nu"><label>Senha</label><input id="np" type="password"><label>DocId</label><input id="nd" placeholder="ex: QfJPjC9o8G">
       <button id="cu">Criar usuário</button><div id="am"></div></div></div></div>`;
   const go=async()=>{const m=document.getElementById('lm'),u=val('lu'),s=val('lp');if(!u||!s){m.innerHTML='<p class="err">Preencha usuário e senha.</p>';return;}
-    try{m.textContent='Entrando…';const r=await fetch(LS.url.replace(/\/$/,'')+'/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({usuario:u,senha:s})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Falha no login');LS.token=d.token;const nv=document.getElementById('nav');if(nv)nv.style.display='';current='home';syncNav();render();}catch(e){m.innerHTML=`<p class="err">${e.message}</p>`;}};
+    try{m.textContent='Entrando…';const r=await fetch(LS.url.replace(/\/$/,'')+'/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({usuario:u,senha:s})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Falha no login');LS.token=d.token;LS.user=d.usuario||u;const nv=document.getElementById('nav');if(nv)nv.style.display='';current='home';syncNav();render();}catch(e){m.innerHTML=`<p class="err">${e.message}</p>`;}};
   document.getElementById('lbtn').onclick=go;
   document.getElementById('lp').onkeydown=e=>{if(e.key==='Enter')go();};
   document.getElementById('atog').onclick=()=>{const a=document.getElementById('abox');a.style.display=a.style.display==='none'?'block':'none';};
@@ -450,7 +453,7 @@ async function viewConfig(){
       <button id="cu">Criar / atualizar</button><div id="m2"></div>
       <label style="margin-top:14px">URL do Worker (avançado)</label><input id="c_url" value="${LS.url}"><button class="ghost" id="csave">Salvar URL</button></div></div>`;
   document.getElementById('svh').onclick=()=>{LS.vh=parseFloat(val('c_vh')||'0')||0;document.getElementById('m1').innerHTML='<p class="ok">Salvo.</p>';};
-  document.getElementById('logout').onclick=()=>{LS.token='';showLogin();};
+  document.getElementById('logout').onclick=()=>{LS.token='';LS.user='';showLogin();};
   document.getElementById('toggle').onclick=()=>{const a=document.getElementById('adv');a.style.display=a.style.display==='none'?'block':'none';};
   document.getElementById('csave').onclick=()=>{LS.url=val('c_url').trim();document.getElementById('m2').innerHTML='<p class="ok">URL salva.</p>';};
   document.getElementById('cu').onclick=async()=>{const m=document.getElementById('m2');const ak=val('ak'),u=val('nu'),s=val('np'),d=val('nd');if(!ak||!u||!s||!d){m.innerHTML='<p class="err">Preencha tudo.</p>';return;}
