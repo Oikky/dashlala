@@ -424,13 +424,20 @@ function viewTimer(){
 function showLogin(){
   const nav=document.getElementById('nav');if(nav)nav.style.display='none';
   const ml=document.getElementById('monthLabel');if(ml)ml.textContent='';
-  app.innerHTML=`<div style="max-width:380px;margin:8vh auto 0"><div class="hero" style="text-align:center"><div class="lbl">Bem-vindo</div><div class="v" style="font-size:30px">Dash Lala</div></div>
+  app.innerHTML=`<div style="max-width:390px;margin:7vh auto 0"><div class="hero" style="text-align:center"><div class="lbl">Bem-vindo</div><div class="v" style="font-size:30px">Dash Lala</div></div>
     <div class="panel" style="margin-top:16px"><label>Usuário</label><input id="lu" autocomplete="username"><label>Senha</label><input id="lp" type="password" autocomplete="current-password">
-    <button id="lbtn">Entrar</button><div id="lm"></div></div></div>`;
+    <button id="lbtn">Entrar</button><div id="lm"></div></div>
+    <div class="panel" style="margin-top:12px"><button class="ghost" id="atog">Primeiro acesso / criar usuário</button><div id="abox" style="display:none">
+      <p class="muted" style="font-size:12px">Precisa da chave de admin do Worker. Cria/atualiza um usuário e vincula o doc dele.</p>
+      <label>Chave de admin</label><input id="ak" type="password"><label>Novo usuário</label><input id="nu"><label>Senha</label><input id="np" type="password"><label>DocId</label><input id="nd" placeholder="ex: QfJPjC9o8G">
+      <button id="cu">Criar usuário</button><div id="am"></div></div></div></div>`;
   const go=async()=>{const m=document.getElementById('lm'),u=val('lu'),s=val('lp');if(!u||!s){m.innerHTML='<p class="err">Preencha usuário e senha.</p>';return;}
     try{m.textContent='Entrando…';const r=await fetch(LS.url.replace(/\/$/,'')+'/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({usuario:u,senha:s})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Falha no login');LS.token=d.token;const nv=document.getElementById('nav');if(nv)nv.style.display='';current='home';syncNav();render();}catch(e){m.innerHTML=`<p class="err">${e.message}</p>`;}};
   document.getElementById('lbtn').onclick=go;
   document.getElementById('lp').onkeydown=e=>{if(e.key==='Enter')go();};
+  document.getElementById('atog').onclick=()=>{const a=document.getElementById('abox');a.style.display=a.style.display==='none'?'block':'none';};
+  document.getElementById('cu').onclick=async()=>{const m=document.getElementById('am'),ak=val('ak'),u=val('nu'),s=val('np'),d=val('nd');if(!ak||!u||!s||!d){m.innerHTML='<p class="err">Preencha tudo.</p>';return;}
+    try{m.textContent='Criando…';const r=await fetch(LS.url.replace(/\/$/,'')+'/admin/setuser',{method:'POST',headers:{'Content-Type':'application/json','X-Admin-Key':ak},body:JSON.stringify({usuario:u,senha:s,docId:d})});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'Erro');m.innerHTML='<p class="ok">Usuário criado! Agora é só entrar acima.</p>';document.getElementById('lu').value=u;document.getElementById('lp').value=s;}catch(e){m.innerHTML=`<p class="err">${e.message}</p>`;}};
 }
 async function viewConfig(){
   app.innerHTML=`<h2>Preferências</h2>
