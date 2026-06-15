@@ -79,15 +79,17 @@
 <div id="modal"></div>
 <nav id="nav"></nav>
 <script>
-const LS={get url(){return localStorage.getItem('dl_url')||''},set url(v){localStorage.setItem('dl_url',v)},
-  get key(){return localStorage.getItem('dl_key')||''},set key(v){localStorage.setItem('dl_key',v)},
+const DEFAULT_URL='https://dash-lala-api.ikkysousa5.workers.dev';
+const LS={get url(){return localStorage.getItem('dl_url')||DEFAULT_URL},set url(v){localStorage.setItem('dl_url',v)},
+  get token(){return localStorage.getItem('dl_token')||''},set token(v){v?localStorage.setItem('dl_token',v):localStorage.removeItem('dl_token')},
   get vh(){return parseFloat(localStorage.getItem('dl_vh')||'0')||0},set vh(v){localStorage.setItem('dl_vh',v)}};
 const BRL=n=>(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const app=document.getElementById('app');
 let charts=[];
 async function api(method,path,body){
-  if(!LS.url||!LS.key)throw new Error('Configure a URL do Worker e a chave em Config.');
-  const r=await fetch(LS.url.replace(/\/$/,'')+path,{method,headers:{'X-App-Key':LS.key,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
+  if(!LS.token)throw new Error('Faça login.');
+  const r=await fetch(LS.url.replace(/\/$/,'')+path,{method,headers:{'Authorization':'Bearer '+LS.token,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
+  if(r.status===401){LS.token='';showLogin();throw new Error('Sessão expirada — entre de novo.');}
   const data=await r.json().catch(()=>({}));
   if(!r.ok)throw new Error(data.error||('Erro '+r.status));
   return data;
@@ -106,7 +108,7 @@ function fmtBR(s){if(!s)return'';const p=String(s).slice(0,10).split('-');return
 function ym(s){return String(s||'').slice(0,7);}
 function addMonthsISO(iso,k){const d=new Date(iso+'T00:00:00');d.setMonth(d.getMonth()+k);return d.toISOString().slice(0,10);}
 function monthsBetween(a,b){const x=new Date(a+'T00:00:00'),y=new Date(b+'T00:00:00');return (y.getFullYear()-x.getFullYear())*12+(y.getMonth()-x.getMonth());}
-function cfg(){if(!LS.url||!LS.key){app.innerHTML='<p class="muted">Configure a URL do Worker e a chave em <b>Config</b> para começar.</p>';return false;}return true;}
+function cfg(){if(!LS.token){showLogin();return false;}return true;}
 function destroyCharts(){charts.forEach(c=>{try{c.destroy()}catch(e){}});charts=[];}
 function selOpts(arr,field,sel){return '<option value=""></option>'+arr.map(r=>{const v=(r[field]||'').toString();return `<option ${v===sel?'selected':''}>${v}</option>`}).join('');}
 function seg(items,active,pick,mini){const d=document.createElement('div');d.className='seg'+(mini?' mini':'');items.forEach(([id,lb])=>{const b=document.createElement('button');b.textContent=lb;if(id===active)b.className='on';b.onclick=()=>pick(id);d.appendChild(b);});return d;}
@@ -419,18 +421,34 @@ function viewTimer(){
   paint();upd();clearInterval(tick);tick=setInterval(upd,1000);loadSes();
 }
 
+function showLogin(){
+  const nav=document.getElementById('nav');if(nav)nav.style.display='none';
+  const ml=document.getElementById('monthLabel');if(ml)ml.textContent='';
+  app.innerHTML=`<div style="max-width:380px;margin:8vh auto 0"><div class="hero" style="text-align:center"><div class="lbl">Bem-vindo</div><div class="v" style="font-size:30px">Dash Lala</div></div>
+    <div class="panel" style="margin-top:16px"><label>Usuário</label><input id="lu" autocomplete="username"><label>Senha</label><input id="lp" type="password" autocomplete="current-password">
+    <button id="lbtn">Entrar</button><div id="lm"></div></div></div>`;
+  const go=async()=>{const m=document.getElementById('lm'),u=val('lu'),s=val('lp');if(!u||!s){m.innerHTML='<p class="err">Preencha usuário e senha.</p>';return;}
+    try{m.textContent='Entrando…';const r=await fetch(LS.url.replace(/\/$/,'')+'/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({usuario:u,senha:s})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Falha no login');LS.token=d.token;const nv=document.getElementById('nav');if(nv)nv.style.display='';current='home';syncNav();render();}catch(e){m.innerHTML=`<p class="err">${e.message}</p>`;}};
+  document.getElementById('lbtn').onclick=go;
+  document.getElementById('lp').onkeydown=e=>{if(e.key==='Enter')go();};
+}
 async function viewConfig(){
   app.innerHTML=`<h2>Preferências</h2>
     <div class="panel"><label>Valor por hora (R$)</label><input id="c_vh" type="number" step="0.01" value="${LS.vh||''}"><button id="svh">Salvar valor/hora</button><div id="m1"></div></div>
     <h2>Categorias</h2><div class="panel" id="catbox"><div class="skel"></div></div>
-    <h2>Avançado</h2><div class="panel"><button class="ghost" id="toggle">Mostrar conexão (Worker / chave)</button><div id="adv" style="display:none">
-      <label>URL do Worker</label><input id="c_url" value="${LS.url}"><label>Chave de acesso</label><input id="c_key" type="password" value="${LS.key}">
-      <button id="csave">Salvar conexão</button><button class="ghost" id="ctest">Testar</button><div id="m2"></div></div></div>`;
+    <h2>Conta</h2><div class="panel"><button class="ghost" id="logout">Sair desta conta</button></div>
+    <h2>Admin · criar usuário</h2><div class="panel"><button class="ghost" id="toggle">Mostrar</button><div id="adv" style="display:none">
+      <p class="muted" style="font-size:12px">Só para o administrador. Cria/atualiza um usuário e vincula o doc dele.</p>
+      <label>Chave de admin</label><input id="ak" type="password"><label>Usuário</label><input id="nu"><label>Senha</label><input id="np" type="password"><label>DocId do usuário</label><input id="nd" placeholder="ex: QfJPjC9o8G">
+      <button id="cu">Criar / atualizar</button><div id="m2"></div>
+      <label style="margin-top:14px">URL do Worker (avançado)</label><input id="c_url" value="${LS.url}"><button class="ghost" id="csave">Salvar URL</button></div></div>`;
   document.getElementById('svh').onclick=()=>{LS.vh=parseFloat(val('c_vh')||'0')||0;document.getElementById('m1').innerHTML='<p class="ok">Salvo.</p>';};
+  document.getElementById('logout').onclick=()=>{LS.token='';showLogin();};
   document.getElementById('toggle').onclick=()=>{const a=document.getElementById('adv');a.style.display=a.style.display==='none'?'block':'none';};
-  document.getElementById('csave').onclick=()=>{LS.url=val('c_url').trim();LS.key=val('c_key').trim();document.getElementById('m2').innerHTML='<p class="ok">Salvo.</p>';};
-  document.getElementById('ctest').onclick=async()=>{const m=document.getElementById('m2');LS.url=val('c_url').trim();LS.key=val('c_key').trim();try{m.textContent='Testando…';const r=await list('Contas');m.innerHTML=`<p class="ok">Conectado! ${r.length} conta(s).</p>`;}catch(e){m.innerHTML=`<p class="err">${e.message}</p>`;}};
-  if(LS.url&&LS.key)loadCats();
+  document.getElementById('csave').onclick=()=>{LS.url=val('c_url').trim();document.getElementById('m2').innerHTML='<p class="ok">URL salva.</p>';};
+  document.getElementById('cu').onclick=async()=>{const m=document.getElementById('m2');const ak=val('ak'),u=val('nu'),s=val('np'),d=val('nd');if(!ak||!u||!s||!d){m.innerHTML='<p class="err">Preencha tudo.</p>';return;}
+    try{m.textContent='Salvando…';const r=await fetch(LS.url.replace(/\/$/,'')+'/admin/setuser',{method:'POST',headers:{'Content-Type':'application/json','X-Admin-Key':ak},body:JSON.stringify({usuario:u,senha:s,docId:d})});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'Erro');m.innerHTML='<p class="ok">Usuário salvo!</p>';}catch(e){m.innerHTML=`<p class="err">${e.message}</p>`;}};
+  if(LS.token)loadCats();
   async function loadCats(){const box=document.getElementById('catbox');try{const cats=await list('Categorias');
     box.innerHTML=`<label>Nova categoria</label><input id="cn" placeholder="ex: Mercado"><label>Tipo</label><select id="ct"><option>Saída</option><option>Entrada</option></select><button id="cadd">Adicionar</button><div id="m3"></div>
       <div style="margin-top:12px">${cats.length?cats.map(c=>`<div class="item"><div>${c['Nome']||'—'}</div><div style="display:flex;align-items:center;gap:8px"><span class="pill">${c['Tipo']||''}</span><button class="delx" data-del="${c.id}" title="Remover">🗑</button></div></div>`).join(''):'<p class="muted">Nenhuma categoria.</p>'}</div>`;
@@ -439,7 +457,7 @@ async function viewConfig(){
     box.querySelectorAll('button[data-del]').forEach(b=>b.onclick=async()=>{if(!confirm('Remover categoria?'))return;try{await delRow('Categorias',b.dataset.del);loadCats();}catch(e){alert(e.message);}});
   }catch(e){box.innerHTML=`<p class="err">${e.message}</p>`;}}
 }
-syncNav();render();
-</script>
+if(LS.token){syncNav();render();}else{showLogin();}
+</script></script>
 </body>
 </html>
