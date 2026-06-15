@@ -3,13 +3,15 @@
 
 ; ===================== CONFIGURE AQUI (uma vez) =====================
 WORKER_URL := "https://dash-lala-api.ikkysousa5.workers.dev"
-APP_KEY    := "lala-2026-XYZ"            ; a mesma senha do Cloudflare
+USUARIO    := "seu_usuario"               ; mesmo usuário/senha do login do site
+SENHA      := "sua_senha"
 VALOR_HORA := 10                          ; R$ por hora
 ; ===================================================================
 
 global STATE := A_ScriptDir "\cronometro_estado.ini"
 global SES := "tables/Sess%C3%B5es%20de%20Trabalho/rows"
 global LAN := "tables/Lan%C3%A7amentos/rows"
+global TOKEN := ""
 global userHidden := false
 global isShown := false
 global flashText := "", flashColor := "", flashUntil := 0
@@ -178,14 +180,40 @@ Registrar(*) {
     Flash(erro = "" ? "OK  " horas "h  " BRL(horas * VALOR_HORA) : "erro" erro, erro = "" ? "37B26B" : "E5575C", 5000)
 }
 
-PostJSON(path, body) {
-    global WORKER_URL, APP_KEY
-    url := RTrim(WORKER_URL, "/") "/" path
+Login() {
+    global WORKER_URL, USUARIO, SENHA, TOKEN
     try {
         whr := ComObject("WinHttp.WinHttpRequest.5.1")
-        whr.Open("POST", url, false)
+        whr.Open("POST", RTrim(WORKER_URL, "/") "/login", false)
         whr.SetRequestHeader("Content-Type", "application/json; charset=utf-8")
-        whr.SetRequestHeader("X-App-Key", APP_KEY)
+        body := '{"usuario":"' USUARIO '","senha":"' SENHA '"}'
+        st := ComObject("ADODB.Stream")
+        st.Type := 2, st.Charset := "UTF-8", st.Open(), st.WriteText(body)
+        st.Position := 0, st.Type := 1, st.Position := 3
+        whr.Send(st.Read()), st.Close()
+        if (whr.Status = 200 && RegExMatch(whr.ResponseText, '"token"\s*:\s*"([^"]+)"', &m))
+            TOKEN := m[1]
+    } catch as e {
+    }
+    return TOKEN
+}
+PostJSON(path, body) {
+    if (TOKEN = "")
+        Login()
+    s := SendReq(path, body)
+    if (s = 401) {
+        Login()
+        s := SendReq(path, body)
+    }
+    return s
+}
+SendReq(path, body) {
+    global WORKER_URL, TOKEN
+    try {
+        whr := ComObject("WinHttp.WinHttpRequest.5.1")
+        whr.Open("POST", RTrim(WORKER_URL, "/") "/" path, false)
+        whr.SetRequestHeader("Content-Type", "application/json; charset=utf-8")
+        whr.SetRequestHeader("Authorization", "Bearer " TOKEN)
         st := ComObject("ADODB.Stream")
         st.Type := 2, st.Charset := "UTF-8"
         st.Open(), st.WriteText(body)
