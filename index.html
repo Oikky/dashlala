@@ -403,8 +403,7 @@ function viewTimer(){
     </div>
     <h2>Sessões recentes</h2><div id="ses"><div class="skel"></div></div>
     <h2>Widget do PC</h2><div class="panel"><p class="muted">Atalhos globais (Ctrl+Alt+I iniciar · P pausar/voltar · R registrar · V mostrar) com um widget no canto da tela.</p>
-      <a href="${ghUrl}/raw/main/cronometro.ahk" download><button class="ghost">Baixar cronometro.ahk</button></a>
-      <a href="${ghUrl}/raw/main/instalar-cronometro.bat" download><button class="ghost">Baixar instalador</button></a></div>`;
+      <button class="ghost" id="dlw">Baixar widget (.ahk + instalador)</button></div>`;
   const K={a:'dl_active',s:'dl_seg',c:'dl_acum'},g=k=>localStorage.getItem(k);
   function worked(){if(!g(K.a))return 0;let a=parseFloat(g(K.c)||'0');if(g(K.s))a+=(Date.now()-Number(g(K.s)))/1000;return a;}
   function paint(){const active=!!g(K.a),running=!!g(K.s);
@@ -422,6 +421,7 @@ function viewTimer(){
       localStorage.removeItem(K.a);localStorage.removeItem(K.s);localStorage.removeItem(K.c);m.innerHTML=`<p class="ok">✅ ${horas}h · ${BRL(valor)}</p>`;paint();loadSes();}catch(e){m.innerHTML=`<p class="err">${e.message}</p>`;}}
   async function loadSes(){const el=document.getElementById('ses');try{const ses=(await list('Sessões de Trabalho')).slice(-10).reverse();
     el.innerHTML=ses.length?ses.map(s=>`<div class="item"><div>${fmtBR(s['Início'])}<br><small>${num(s['Duração (h)']).toFixed(2)}h</small></div><div class="val green">${BRL(num(s['Duração (h)'])*num(s['Valor/hora']))}</div></div>`).join(''):'<p class="muted">Nenhuma sessão ainda.</p>';}catch(e){el.innerHTML=`<p class="err">${e.message}</p>`;}}
+  const dl=document.getElementById('dlw');if(dl)dl.onclick=()=>{['cronometro.ahk','instalar-cronometro.bat'].forEach((f,i)=>setTimeout(()=>{const a=document.createElement('a');a.href=ghUrl+'/raw/main/'+f;a.download=f;document.body.appendChild(a);a.click();a.remove();},i*700));};
   paint();upd();clearInterval(tick);tick=setInterval(upd,1000);loadSes();
 }
 
