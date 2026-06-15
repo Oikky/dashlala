@@ -3,9 +3,8 @@
 
 ; ===================== CONFIGURE AQUI (uma vez) =====================
 WORKER_URL := "https://dash-lala-api.ikkysousa5.workers.dev"
-USUARIO    := "seu_usuario"               ; mesmo usuário/senha do login do site
-SENHA      := "sua_senha"
 VALOR_HORA := 10                          ; R$ por hora
+; Usuário e senha são pedidos na 1ª vez e salvos. Trocar a conta: Ctrl+Alt+L
 ; ===================================================================
 
 global STATE := A_ScriptDir "\cronometro_estado.ini"
@@ -32,6 +31,7 @@ Update()
 ^!p::Pausar()     ; Ctrl+Alt+P  -> pausar (salva o trecho) / voltar
 ^!r::Registrar()  ; Ctrl+Alt+R  -> fecha o último trecho e zera
 ^!v::Ver()        ; Ctrl+Alt+V  -> mostrar/esconder
+^!l::ReLogin()    ; Ctrl+Alt+L  -> trocar usuário/senha
 
 HHMMSS(s) {
     h := s // 3600, m := Mod(s, 3600) // 60, x := Mod(s, 60)
@@ -181,12 +181,20 @@ Registrar(*) {
 }
 
 Login() {
-    global WORKER_URL, USUARIO, SENHA, TOKEN
+    global WORKER_URL, TOKEN, STATE
+    u := IniRead(STATE, "conta", "usuario", "")
+    s := IniRead(STATE, "conta", "senha", "")
+    if (u = "" || s = "") {
+        if !PedirLogin()
+            return ""
+        u := IniRead(STATE, "conta", "usuario", "")
+        s := IniRead(STATE, "conta", "senha", "")
+    }
     try {
         whr := ComObject("WinHttp.WinHttpRequest.5.1")
         whr.Open("POST", RTrim(WORKER_URL, "/") "/login", false)
         whr.SetRequestHeader("Content-Type", "application/json; charset=utf-8")
-        body := '{"usuario":"' USUARIO '","senha":"' SENHA '"}'
+        body := '{"usuario":"' JsonEsc(u) '","senha":"' JsonEsc(s) '"}'
         st := ComObject("ADODB.Stream")
         st.Type := 2, st.Charset := "UTF-8", st.Open(), st.WriteText(body)
         st.Position := 0, st.Type := 1, st.Position := 3
@@ -196,6 +204,27 @@ Login() {
     } catch as e {
     }
     return TOKEN
+}
+JsonEsc(x) => StrReplace(StrReplace(x, "\", "\\"), '"', '\"')
+PedirLogin() {
+    global STATE
+    ib := InputBox("Usuário do Dash Lala:", "Dash — Login")
+    if (ib.Result != "OK" || ib.Value = "")
+        return false
+    ib2 := InputBox("Senha:", "Dash — Login", "Password")
+    if (ib2.Result != "OK" || ib2.Value = "")
+        return false
+    IniWrite(ib.Value, STATE, "conta", "usuario")
+    IniWrite(ib2.Value, STATE, "conta", "senha")
+    return true
+}
+ReLogin(*) {
+    global TOKEN
+    if PedirLogin() {
+        TOKEN := ""
+        Login()
+        Flash(TOKEN != "" ? "login ok" : "login falhou", TOKEN != "" ? "37B26B" : "E5575C", 2500)
+    }
 }
 PostJSON(path, body) {
     if (TOKEN = "")
